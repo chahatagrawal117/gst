@@ -425,7 +425,23 @@ function emptyHistory() {
 function normaliseHistory(h) {
   if (!h || typeof h !== 'object') return emptyHistory();
   const filings = Array.isArray(h.filings) ? h.filings : [];
+  backfillSales(filings);
   return { version: h.version || HISTORY_VERSION, filings };
+}
+
+const SALES_FROM_TAX = 1.18 / 0.18;
+function backfillSales(filings) {
+  for (const f of filings) {
+    if (typeof f.totalSales !== 'number' && typeof f.totalTax === 'number') {
+      f.totalSales = round2(f.totalTax * SALES_FROM_TAX);
+    }
+    if (!f.monthlySales && f.monthlyTax) {
+      f.monthlySales = {};
+      for (const [k, tax] of Object.entries(f.monthlyTax)) {
+        f.monthlySales[k] = round2(tax * SALES_FROM_TAX);
+      }
+    }
+  }
 }
 function loadCachedHistory() {
   try {
@@ -565,7 +581,9 @@ function currentFilingSummary() {
     invoiceRangeStart: lastResult.startingInvoiceNo,
     invoiceRangeEnd: lastResult.lastNo,
     totalTax,
-    monthlyTax: lastResult.monthlyTax
+    totalSales: lastResult.totalSales,
+    monthlyTax: lastResult.monthlyTax,
+    monthlySales: lastResult.monthlySales
   };
 }
 
@@ -689,12 +707,14 @@ function renderHistoryCard() {
   empty.hidden = true;
 
   const totalTax = filings.reduce((s, f) => round2(s + (f.totalTax || 0)), 0);
+  const totalSales = filings.reduce((s, f) => round2(s + (f.totalSales || 0)), 0);
   const totalInvoices = filings.reduce((s, f) => s + (f.totalInvoices || 0), 0);
 
   totals.hidden = false;
   totals.innerHTML = `
     <div><span class="label">Filings recorded</span><span class="value">${filings.length}</span></div>
     <div><span class="label">Total invoices</span><span class="value">${totalInvoices}</span></div>
+    <div class="tile-highlight"><span class="label">Total sales</span><span class="value">₹${totalSales.toFixed(2)}</span></div>
     <div><span class="label">Total tax filed</span><span class="value">₹${totalTax.toFixed(2)}</span></div>
   `;
 
@@ -706,6 +726,7 @@ function renderHistoryCard() {
       <td>${escapeHtml(new Date(f.generatedAt).toLocaleString())}</td>
       <td>${f.totalInvoices || 0}</td>
       <td>${f.invoiceRangeStart}–${f.invoiceRangeEnd}</td>
+      <td>₹${(f.totalSales || 0).toFixed(2)}</td>
       <td>₹${(f.totalTax || 0).toFixed(2)}</td>
       <td><button type="button" class="delete-row" data-id="${escapeHtml(f.id)}" title="Delete">×</button></td>
     </tr>
@@ -717,31 +738,37 @@ function renderHistoryCard() {
     });
   });
 
-  const monthTotals = {};
+  const monthTax = {};
+  const monthSales = {};
   for (const f of filings) {
-    const m = f.monthlyTax || {};
-    for (const k of Object.keys(m)) {
-      monthTotals[k] = round2((monthTotals[k] || 0) + m[k]);
+    const mt = f.monthlyTax || {};
+    const ms = f.monthlySales || {};
+    for (const k of Object.keys(mt)) {
+      monthTax[k] = round2((monthTax[k] || 0) + mt[k]);
+    }
+    for (const k of Object.keys(ms)) {
+      monthSales[k] = round2((monthSales[k] || 0) + ms[k]);
     }
   }
 
   const byFy = {};
-  for (const [key, tax] of Object.entries(monthTotals)) {
+  for (const key of new Set([...Object.keys(monthTax), ...Object.keys(monthSales)])) {
     const [year, month] = key.split('-').map(Number);
     const fyStart = month >= 4 ? year : year - 1;
-    if (!byFy[fyStart]) byFy[fyStart] = { total: 0, months: {} };
-    byFy[fyStart].months[key] = tax;
-    byFy[fyStart].total = round2(byFy[fyStart].total + tax);
+    if (!byFy[fyStart]) byFy[fyStart] = { totalTax: 0, totalSales: 0, months: {} };
+    byFy[fyStart].months[key] = { tax: monthTax[key] || 0, sales: monthSales[key] || 0 };
+    byFy[fyStart].totalTax = round2(byFy[fyStart].totalTax + (monthTax[key] || 0));
+    byFy[fyStart].totalSales = round2(byFy[fyStart].totalSales + (monthSales[key] || 0));
   }
   const fyList = Object.keys(byFy).map(Number).sort((a, b) => b - a);
 
   if (fyList.length) {
     yearlyWrap.hidden = false;
     document.getElementById('historyYearlyBody').innerHTML = fyList.map((fy, idx) => {
-      const { total, months } = byFy[fy];
+      const { totalTax, totalSales, months } = byFy[fy];
       const monthKeys = Object.keys(months).sort().reverse();
       const rows = monthKeys.map(k =>
-        `<tr><td>${monthLabelFromKey(k)}</td><td>₹${months[k].toFixed(2)}</td></tr>`
+        `<tr><td>${monthLabelFromKey(k)}</td><td>₹${months[k].sales.toFixed(2)}</td><td>₹${months[k].tax.toFixed(2)}</td></tr>`
       ).join('');
       const label = `FY ${String(fy).slice(-2)}-${String((fy + 1) % 100).padStart(2, '0')}`;
       const open = idx === 0 ? ' open' : '';
@@ -749,9 +776,13 @@ function renderHistoryCard() {
         <summary>
           <span class="year-label">${label}</span>
           <span class="year-count">${monthKeys.length} month${monthKeys.length === 1 ? '' : 's'}</span>
-          <span class="year-total">₹${total.toFixed(2)}</span>
+          <span class="year-sales">Sales ₹${totalSales.toFixed(2)}</span>
+          <span class="year-total">Tax ₹${totalTax.toFixed(2)}</span>
         </summary>
-        <table class="month-table"><tbody>${rows}</tbody></table>
+        <table class="month-table">
+          <thead><tr><th>Month</th><th>Sales</th><th>Tax</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
       </details>`;
     }).join('');
   } else {
@@ -1421,18 +1452,22 @@ function onGenerate() {
 
   const lastNo = startingInvoiceNo + combined.length - 1;
 
-  // Month-wise tax breakdown (keys: "YYYY-MM")
+  // Month-wise tax and sales breakdown (keys: "YYYY-MM")
   const monthlyTax = {};
+  const monthlySales = {};
   for (const order of combined) {
     const key = `${order._dateObj.year}-${String(order._dateObj.month).padStart(2, '0')}`;
-    const rowTax = Number(order['Total Transaction Value']) - Number(order['Item Taxable Value']);
+    const rowTotal = Number(order['Total Transaction Value']);
+    const rowTax = rowTotal - Number(order['Item Taxable Value']);
     monthlyTax[key] = round2((monthlyTax[key] || 0) + rowTax);
+    monthlySales[key] = round2((monthlySales[key] || 0) + rowTotal);
   }
+  const totalSales = Object.values(monthlySales).reduce((a, b) => round2(a + b), 0);
 
   lastResult = {
     combined, combinedCsv, offlineCsv, offlineOutputRows, invoiceMap, startingInvoiceNo,
     firstStr, lastStr, rangeLabel, filenameBase, lastNo, counterSaved: false,
-    monthlyTax,
+    monthlyTax, monthlySales, totalSales,
     filingStart, filingEnd,
     onlineCount: shopifyOrders.length, offlineCount: offlineOrders.length
   };
