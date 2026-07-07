@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "filings": [
+    {
+      "id": "1Jan26_31Mar26_gst_sheet",
+      "period": "1Jan26 \u2192 31Mar26",
+      "filingStart": "1Jan26",
+      "filingEnd": "31Mar26",
+      "filingStartYearMonth": "2026-01",
+      "generatedAt": "2026-03-30T00:00:00.000Z",
+      "onlineOrders": 125,
+      "offlineOrders": 5,
+      "totalInvoices": 130,
+      "invoiceRangeStart": 501,
+      "invoiceRangeEnd": 635,
+      "totalTax": 35907.88,
+      "monthlyTax": {
+        "2026-01": 7080.89,
+        "2026-02": 12272.18,
+        "2026-03": 16554.81
+      }
+    },
+    {
+      "id": "1Oct25_31Dec25_gst_sheet",
+      "period": "1Oct25 \u2192 31Dec25",
+      "filingStart": "1Oct25",
+      "filingEnd": "31Dec25",
+      "filingStartYearMonth": "2025-10",
+      "generatedAt": "2025-12-31T00:00:00.000Z",
+      "onlineOrders": 126,
+      "offlineOrders": 12,
+      "totalInvoices": 138,
+      "invoiceRangeStart": 351,
+      "invoiceRangeEnd": 500,
+      "totalTax": 89513.32,
+      "monthlyTax": {
+        "2025-10": 15962.54,
+        "2025-11": 65356.65,
+        "2025-12": 8194.13
+      }
+    },
+    {
+      "id": "1Jul25_30Sep25_gst_sheet",
+      "period": "1Jul25 \u2192 30Sep25",
+      "filingStart": "1Jul25",
+      "filingEnd": "30Sep25",
+      "filingStartYearMonth": "2025-07",
+      "generatedAt": "2025-09-27T00:00:00.000Z",
+      "onlineOrders": 212,
+      "offlineOrders": 7,
+      "totalInvoices": 219,
+      "invoiceRangeStart": 125,
+      "invoiceRangeEnd": 350,
+      "totalTax": 55113.82,
+      "monthlyTax": {
+        "2025-07": 12645.48,
+        "2025-08": 30702.28,
+        "2025-09": 11766.06
+      }
+    },
+    {
+      "id": "1Apr25_30Jun25_gst_sheet",
+      "period": "1Apr25 \u2192 30Jun25",
+      "filingStart": "1Apr25",
+      "filingEnd": "30Jun25",
+      "filingStartYearMonth": "2025-04",
+      "generatedAt": "2025-06-30T00:00:00.000Z",
+      "onlineOrders": 123,
+      "offlineOrders": 1,
+      "totalInvoices": 124,
+      "invoiceRangeStart": 1851,
+      "invoiceRangeEnd": 2160,
+      "totalTax": 16821.26,
+      "monthlyTax": {
+        "2025-06": 9915.54,
+        "2025-05": 4647.5,
+        "2025-04": 2258.22
+      }
+    },
+    {
+      "id": "1Jan25_31Mar25_gst_sheet",
+      "period": "1Jan25 \u2192 31Mar25",
+      "filingStart": "1Jan25",
+      "filingEnd": "31Mar25",
+      "filingStartYearMonth": "2025-01",
+      "generatedAt": "2025-03-30T00:00:00.000Z",
+      "onlineOrders": 87,
+      "offlineOrders": 0,
+      "totalInvoices": 87,
+      "invoiceRangeStart": 1670,
+      "invoiceRangeEnd": 1849,
+      "totalTax": 9859.08,
+      "monthlyTax": {
+        "2025-03": 4032.3,
+        "2025-02": 2943.88,
+        "2025-01": 2882.9
+      }
+    },
+    {
+      "id": "1Oct24_31Dec24_gst_sheet",
+      "period": "1Oct24 \u2192 31Dec24",
+      "filingStart": "1Oct24",
+      "filingEnd": "31Dec24",
+      "filingStartYearMonth": "2024-10",
+      "generatedAt": "2024-12-31T00:00:00.000Z",
+      "onlineOrders": 41,
+      "offlineOrders": 0,
+      "totalInvoices": 41,
+      "invoiceRangeStart": 1574,
+      "invoiceRangeEnd": 1662,
+      "totalTax": 5211.67,
+      "monthlyTax": {
+        "2024-12": 1194.33,
+        "2024-11": 2060.99,
+        "2024-10": 1956.35
+      }
+    },
+    {
+      "id": "1Jul24_30Sep24_gst_sheet",
+      "period": "1Jul24 \u2192 30Sep24",
+      "filingStart": "1Jul24",
+      "filingEnd": "30Sep24",
+      "filingStartYearMonth": "2024-07",
+      "generatedAt": "2024-09-30T00:00:00.000Z",
+      "onlineOrders": 71,
+      "offlineOrders": 0,
+      "totalInvoices": 71,
+      "invoiceRangeStart": 1397,
+      "invoiceRangeEnd": 1571,
+      "totalTax": 7034.19,
+      "monthlyTax": {
+        "2024-09": 3735.3,
+        "2024-08": 1653.73,
+        "2024-07": 1645.16
+      }
+    },
+    {
+      "id": "1Apr24_30Jun24_gst_sheet",
+      "period": "1Apr24 \u2192 30Jun24",
+      "filingStart": "1Apr24",
+      "filingEnd": "30Jun24",
+      "filingStartYearMonth": "2024-04",
+      "generatedAt": "2024-06-27T00:00:00.000Z",
+      "onlineOrders": 36,
+      "offlineOrders": 1,
+      "totalInvoices": 37,
+      "invoiceRangeStart": 1200,
+      "invoiceRangeEnd": 1391,
+      "totalTax": 3682.5,
+      "monthlyTax": {
+        "2024-06": 939.22,
+        "2024-05": 2156.77,
+        "2024-04": 586.51
+      }
+    },
+    {
+      "id": "1Jan24_31Mar24_gst_sheet",
+      "period": "1Jan24 \u2192 31Mar24",
+      "filingStart": "1Jan24",
+      "filingEnd": "31Mar24",
+      "filingStartYearMonth": "2024-01",
+      "generatedAt": "2024-03-29T00:00:00.000Z",
+      "onlineOrders": 89,
+      "offlineOrders": 0,
+      "totalInvoices": 89,
+      "invoiceRangeStart": 1086,
+      "invoiceRangeEnd": 1246,
+      "totalTax": 6260.92,
+      "monthlyTax": {
+        "2024-03": 2339.63,
+        "2024-02": 2587.5,
+        "2024-01": 1333.79
+      }
+    },
+    {
+      "id": "1Oct23_31Dec23_gst_sheet",
+      "period": "1Oct23 \u2192 31Dec23",
+      "filingStart": "1Oct23",
+      "filingEnd": "31Dec23",
+      "filingStartYearMonth": "2023-10",
+      "generatedAt": "2023-12-30T00:00:00.000Z",
+      "onlineOrders": 50,
+      "offlineOrders": 0,
+      "totalInvoices": 50,
+      "invoiceRangeStart": 1021,
+      "invoiceRangeEnd": 1085,
+      "totalTax": 3333.03,
+      "monthlyTax": {
+        "2023-12": 1938.51,
+        "2023-11": 1345.86,
+        "2023-10": 48.66
+      }
+    }
+  ]
+}
