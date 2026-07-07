@@ -3,7 +3,7 @@
   "filings": [
     {
       "id": "1Apr26_30Jun26_gst_sheet",
-      "period": "1Apr26 → 30Jun26 (orders: 1Apr26 – 30Jun26)",
+      "period": "1Apr26 \u2192 30Jun26 (orders: 1Apr26 \u2013 30Jun26)",
       "filingStart": "1Apr26",
       "filingEnd": "30Jun26",
       "filingStartYearMonth": "2026-04",
@@ -22,7 +22,7 @@
     },
     {
       "id": "1Jan26_31Mar26_gst_sheet",
-      "period": "1Jan26 → 31Mar26",
+      "period": "1Jan26 \u2192 31Mar26",
       "filingStart": "1Jan26",
       "filingEnd": "31Mar26",
       "filingStartYearMonth": "2026-01",
@@ -37,11 +37,17 @@
         "2026-01": 7080.89,
         "2026-02": 12272.18,
         "2026-03": 16554.81
+      },
+      "totalSales": 235396.0,
+      "monthlySales": {
+        "2026-01": 46419.0,
+        "2026-02": 80451.0,
+        "2026-03": 108526.0
       }
     },
     {
       "id": "1Oct25_31Dec25_gst_sheet",
-      "period": "1Oct25 → 31Dec25",
+      "period": "1Oct25 \u2192 31Dec25",
       "filingStart": "1Oct25",
       "filingEnd": "31Dec25",
       "filingStartYearMonth": "2025-10",
@@ -56,11 +62,17 @@
         "2025-10": 15962.54,
         "2025-11": 65356.65,
         "2025-12": 8194.13
+      },
+      "totalSales": 586809.26,
+      "monthlySales": {
+        "2025-10": 104643.06,
+        "2025-11": 428449.2,
+        "2025-12": 53717.0
       }
     },
     {
       "id": "1Jul25_30Sep25_gst_sheet",
-      "period": "1Jul25 → 30Sep25",
+      "period": "1Jul25 \u2192 30Sep25",
       "filingStart": "1Jul25",
       "filingEnd": "30Sep25",
       "filingStartYearMonth": "2025-07",
@@ -75,11 +87,17 @@
         "2025-07": 12645.48,
         "2025-08": 30702.28,
         "2025-09": 11766.06
+      },
+      "totalSales": 361301.76,
+      "monthlySales": {
+        "2025-07": 82898.0,
+        "2025-08": 201270.76,
+        "2025-09": 77133.0
       }
     },
     {
       "id": "1Apr25_30Jun25_gst_sheet",
-      "period": "1Apr25 → 30Jun25",
+      "period": "1Apr25 \u2192 30Jun25",
       "filingStart": "1Apr25",
       "filingEnd": "30Jun25",
       "filingStartYearMonth": "2025-04",
@@ -94,11 +112,17 @@
         "2025-06": 9915.54,
         "2025-05": 4647.5,
         "2025-04": 2258.22
+      },
+      "totalSales": 110273.0,
+      "monthlySales": {
+        "2025-06": 65002.0,
+        "2025-05": 30467.0,
+        "2025-04": 14804.0
       }
     },
     {
       "id": "1Jan25_31Mar25_gst_sheet",
-      "period": "1Jan25 → 31Mar25",
+      "period": "1Jan25 \u2192 31Mar25",
       "filingStart": "1Jan25",
       "filingEnd": "31Mar25",
       "filingStartYearMonth": "2025-01",
@@ -113,11 +137,17 @@
         "2025-03": 4032.3,
         "2025-02": 2943.88,
         "2025-01": 2882.9
+      },
+      "totalSales": 64632.0,
+      "monthlySales": {
+        "2025-03": 26434.0,
+        "2025-02": 19299.0,
+        "2025-01": 18899.0
       }
     },
     {
       "id": "1Oct24_31Dec24_gst_sheet",
-      "period": "1Oct24 → 31Dec24",
+      "period": "1Oct24 \u2192 31Dec24",
       "filingStart": "1Oct24",
       "filingEnd": "31Dec24",
       "filingStartYearMonth": "2024-10",
@@ -132,11 +162,17 @@
         "2024-12": 1194.33,
         "2024-11": 2060.99,
         "2024-10": 1956.35
+      },
+      "totalSales": 34165.5,
+      "monthlySales": {
+        "2024-12": 7829.5,
+        "2024-11": 13511.0,
+        "2024-10": 12825.0
       }
     },
     {
       "id": "1Jul24_30Sep24_gst_sheet",
-      "period": "1Jul24 → 30Sep24",
+      "period": "1Jul24 \u2192 30Sep24",
       "filingStart": "1Jul24",
       "filingEnd": "30Sep24",
       "filingStartYearMonth": "2024-07",
@@ -151,11 +187,17 @@
         "2024-09": 3735.3,
         "2024-08": 1653.73,
         "2024-07": 1645.16
+      },
+      "totalSales": 46113.0,
+      "monthlySales": {
+        "2024-09": 24487.0,
+        "2024-08": 10841.0,
+        "2024-07": 10785.0
       }
     },
     {
       "id": "1Apr24_30Jun24_gst_sheet",
-      "period": "1Apr24 → 30Jun24",
+      "period": "1Apr24 \u2192 30Jun24",
       "filingStart": "1Apr24",
       "filingEnd": "30Jun24",
       "filingStartYearMonth": "2024-04",
@@ -170,11 +212,17 @@
         "2024-06": 939.22,
         "2024-05": 2156.77,
         "2024-04": 586.51
+      },
+      "totalSales": 24142.22,
+      "monthlySales": {
+        "2024-06": 6157.0,
+        "2024-05": 14140.22,
+        "2024-04": 3845.0
       }
     },
     {
       "id": "1Jan24_31Mar24_gst_sheet",
-      "period": "1Jan24 → 31Mar24",
+      "period": "1Jan24 \u2192 31Mar24",
       "filingStart": "1Jan24",
       "filingEnd": "31Mar24",
       "filingStartYearMonth": "2024-01",
@@ -189,11 +237,17 @@
         "2024-03": 2339.63,
         "2024-02": 2587.5,
         "2024-01": 1333.79
+      },
+      "totalSales": 41045.0,
+      "monthlySales": {
+        "2024-03": 15338.0,
+        "2024-02": 16963.0,
+        "2024-01": 8744.0
       }
     },
     {
       "id": "1Oct23_31Dec23_gst_sheet",
-      "period": "1Oct23 → 31Dec23",
+      "period": "1Oct23 \u2192 31Dec23",
       "filingStart": "1Oct23",
       "filingEnd": "31Dec23",
       "filingStartYearMonth": "2023-10",
@@ -208,6 +262,12 @@
         "2023-12": 1938.51,
         "2023-11": 1345.86,
         "2023-10": 48.66
+      },
+      "totalSales": 21850.0,
+      "monthlySales": {
+        "2023-12": 12708.0,
+        "2023-11": 8823.0,
+        "2023-10": 319.0
       }
     }
   ]
