@@ -1,59 +1,81 @@
 # GST Invoice Generator
 
-Combines Shopify export + offline sales, sorts by date, assigns sequential invoice numbers, and generates the CSV needed for filing GST returns.
+A browser-only tool for **SV Graphics** to generate quarterly GST return CSVs by combining Shopify online orders with offline sales. Runs entirely client-side — customer data never leaves the machine.
 
-## How to use (browser)
+**Live app:** https://chahatagrawal117.github.io/gst/
+**Website:** https://sv-graphics.com
 
-Open the site (locally with `python3 -m http.server 8000` inside this folder, or deployed via GitHub Pages). Use the sticky nav bar at the top to jump between **New filing** and **History**.
+---
 
-1. Enter the starting invoice number (auto-prefilled from your last run after you download).
-3. Upload the Shopify `orders_export_*.csv` and set the "Skip orders below ₹" threshold if needed. Click **View orders** to inspect what was imported / skipped and recover skipped rows.
-4. Add offline sales — paste rows directly from Excel/Sheets, upload a CSV, or type into the table.
-5. Click **Generate output**. Review the summary; the filename base defaults to `1Jan26_31Mar26_gst_sheet` (snapped to the fiscal quarter).
-6. Click **Download combined CSV** and **Download offline CSV**. Downloading also saves the filing to your local history (bottom of the page) — total tax, invoice range, and month-wise breakdown accumulate over time.
+## What it does
 
-## Configuration (hardcoded — visible in the UI)
+- Reads Shopify's `orders_export.csv`, groups by order, filters out payment tokens (Total < ₹10)
+- Accepts offline sales via three input methods: paste from a spreadsheet, upload a CSV, or type into an editable table
+- Computes taxable value, CGST/SGST (RJ orders) or IGST (all others) at 18%
+- Sorts all orders (online + offline) by date, assigns sequential invoice numbers starting from a configurable base
+- Snaps the filename to the full fiscal quarter (e.g. `1Jan26_31Mar26_gst_sheet.csv`)
+- Downloads two files: **combined output** (the GST return) and **offline output** (your bill book with the new invoice numbers filled in)
+- Maintains a filing history — total tax filed to date, month-wise breakdown, list of past quarters — stored in `history.json` in this repo so it's available on any device
 
-- Home state: `RJ` — orders from RJ get CGST+SGST split; every other state gets IGST
-- HSN code: `4909`
-- Tax rate: `18%`
-- Fiscal quarters: Apr-Jun / Jul-Sep / Oct-Dec / Jan-Mar
+## How to use
 
-## Deploying to GitHub Pages
+Open the app at **https://chahatagrawal117.github.io/gst/**. Use the top nav to switch between **New filing** and **History**.
 
-1. Create a repository on GitHub (public — the `.gitignore` here already excludes all `*.csv` so your customer data won't be pushed).
-2. Push this folder:
-   ```
-   git init
-   git add index.html app.js style.css README.md .gitignore run.py
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/<username>/<repo>.git
-   git push -u origin main
-   ```
-3. GitHub → Settings → Pages → Source: `Deploy from a branch` → Branch: `main` / root → Save.
-4. Wait ~1 minute. Your app is live at `https://<username>.github.io/<repo>/`.
+### New filing
 
-## Files
+1. **Starting invoice number** — auto-prefills to `1 + max invoice from history`. Editable if you need to override.
+2. **Shopify order export** — click "Choose Shopify orders_export CSV" and select the file you downloaded from Shopify → Orders → Export. Adjust the "Skip orders below ₹" threshold if needed (default ₹10 hides UPI payment tokens). Click "View imported orders" to see what was kept vs. skipped; you can edit and recover any skipped row.
+3. **Offline orders** — pick one:
+   - **Paste**: copy tab-separated rows from your Excel/Google Sheet and paste into the box → click "Add pasted rows"
+   - **Upload CSV**: same 8-column schema as the paste format
+   - **Type manually**: click "+ Add row" and fill in the table
+4. **Generate output** — reviews the summary card with counts, invoice range, total tax, and filing period.
+5. **Download combined CSV** and **Download offline CSV** — filenames come from the fiscal quarter, editable via the "Filename base" input.
+6. **Save to filing history** — appends this quarter's summary to your history file.
 
-- `index.html` / `app.js` / `style.css` — the browser app (100% client-side, no server)
-- `run.py` — original Python script; edit paths at the bottom and run for a CLI version
-- `.gitignore` — excludes CSVs, IDE folders, and the Python venv
+### History
 
-## Cross-device history sync
+- Shows total tax filed to date, invoice range across all quarters, and a month-wise tax dashboard.
+- Search a specific GSTIN / invoice # / party name from the results modal.
+- To sync a new filing across devices:
+  1. Click **Download history.json**
+  2. Open this repo on github.com → navigate to `history.json` (or use "Add file → Upload files" if it doesn't exist yet)
+  3. Replace the file → commit
+  4. On any other device, open the app → history loads automatically
 
-The app looks for a file called `history.json` at the site root. If it's there, it's fetched on every page load and merged with the local browser cache — that's how new devices/browsers see your past filings.
+The status banner at the top of History indicates whether your local view is in sync with the repo or has pending uploads.
 
-**To sync a new filing across devices:**
-1. On the browser where you just filed, scroll to "Filing history" → click **Download history.json**.
-2. Open your repo on github.com.
-3. Replace (or upload for the first time) `history.json` — either click the existing file → pencil (Edit) → paste new content, or use **Add file → Upload files** and drop the file.
-4. Commit.
-5. On any other device, open the site — history loads automatically.
+## Configuration (hardcoded, visible in the UI)
 
-Since this uses the repo itself as storage, there's no token/backend needed. The manual upload takes ~30 seconds per filing.
+- **Home state:** RJ (Rajasthan) — RJ orders get CGST+SGST split; all other states get IGST. Offline orders always get IGST.
+- **HSN code:** 4909
+- **Tax rate:** 18%
+- **Fiscal quarters:** Apr-Jun (Q1), Jul-Sep (Q2), Oct-Dec (Q3), Jan-Mar (Q4)
 
-## Notes
+## Files in the repo
 
-- All processing happens in your browser. No customer data ever leaves your machine except when you manually upload `history.json` to your repo.
-- Starting invoice number auto-prefills from the highest invoice number found across all filings in history.
+| File | Purpose |
+|---|---|
+| `index.html` | UI markup |
+| `app.js` | All logic — CSV parsing, tax math, tables, modals, history, sync |
+| `style.css` | Styling |
+| `favicon.svg` | Browser tab icon |
+| `run.py` | Original Python script (CLI equivalent). Edit paths at the bottom, run with `python3 run.py`. |
+| `history.json` *(not tracked; you upload it)* | Cross-device filing history, treated as the database |
+| `.gitignore` | Excludes customer CSVs, IDE folders, and the Python venv |
+
+## Deploying (already done)
+
+The app is deployed to GitHub Pages from the `main` branch root. Any commit to `main` triggers a redeploy within ~1 minute. To make changes:
+
+```bash
+git add index.html app.js style.css   # whatever you changed
+git commit -m "your message"
+git push
+```
+
+## Privacy notes
+
+- All CSV parsing and tax computation happens in your browser. Nothing is uploaded to any server.
+- The `.gitignore` blocks all `*.csv` files, so customer data never accidentally gets committed.
+- Only `history.json` (summary data — filing period, invoice range, total tax, month-wise breakdown) gets committed to the repo when you manually upload it.
