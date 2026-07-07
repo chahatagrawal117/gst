@@ -10,9 +10,9 @@
       "generatedAt": "2026-03-30T00:00:00.000Z",
       "onlineOrders": 125,
       "offlineOrders": 5,
-      "totalInvoices": 130,
+      "totalInvoices": 131,
       "invoiceRangeStart": 501,
-      "invoiceRangeEnd": 635,
+      "invoiceRangeEnd": 636,
       "totalTax": 35907.88,
       "monthlyTax": {
         "2026-01": 7080.89,
