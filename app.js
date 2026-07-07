@@ -341,6 +341,12 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// Indian-locale currency formatter — groups digits as 15,25,727.74 (not 1,525,727.74)
+function inr(n) {
+  const num = Number(n) || 0;
+  return '₹' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function getMinTotal() {
   const el = document.getElementById('minTotal');
   const n = parseFloat(el && el.value);
@@ -713,9 +719,9 @@ function renderHistoryCard() {
   totals.hidden = false;
   totals.innerHTML = `
     <div><span class="label">Filings recorded</span><span class="value">${filings.length}</span></div>
-    <div><span class="label">Total invoices</span><span class="value">${totalInvoices}</span></div>
-    <div class="tile-highlight"><span class="label">Total sales</span><span class="value">₹${totalSales.toFixed(2)}</span></div>
-    <div><span class="label">Total tax filed</span><span class="value">₹${totalTax.toFixed(2)}</span></div>
+    <div><span class="label">Total invoices</span><span class="value">${totalInvoices.toLocaleString('en-IN')}</span></div>
+    <div class="tile-highlight"><span class="label">Total sales</span><span class="value">${inr(totalSales)}</span></div>
+    <div><span class="label">Total tax filed</span><span class="value">${inr(totalTax)}</span></div>
   `;
 
   tableWrap.hidden = false;
@@ -726,8 +732,8 @@ function renderHistoryCard() {
       <td>${escapeHtml(new Date(f.generatedAt).toLocaleString())}</td>
       <td>${f.totalInvoices || 0}</td>
       <td>${f.invoiceRangeStart}–${f.invoiceRangeEnd}</td>
-      <td>₹${(f.totalSales || 0).toFixed(2)}</td>
-      <td>₹${(f.totalTax || 0).toFixed(2)}</td>
+      <td>${inr(f.totalSales || 0)}</td>
+      <td>${inr(f.totalTax || 0)}</td>
       <td><button type="button" class="delete-row" data-id="${escapeHtml(f.id)}" title="Delete">×</button></td>
     </tr>
   `).join('');
@@ -768,7 +774,7 @@ function renderHistoryCard() {
       const { totalTax, totalSales, months } = byFy[fy];
       const monthKeys = Object.keys(months).sort().reverse();
       const rows = monthKeys.map(k =>
-        `<tr><td>${monthLabelFromKey(k)}</td><td>₹${months[k].sales.toFixed(2)}</td><td>₹${months[k].tax.toFixed(2)}</td></tr>`
+        `<tr><td>${monthLabelFromKey(k)}</td><td>${inr(months[k].sales)}</td><td>${inr(months[k].tax)}</td></tr>`
       ).join('');
       const label = `FY ${String(fy).slice(-2)}-${String((fy + 1) % 100).padStart(2, '0')}`;
       const open = idx === 0 ? ' open' : '';
@@ -776,8 +782,8 @@ function renderHistoryCard() {
         <summary>
           <span class="year-label">${label}</span>
           <span class="year-count">${monthKeys.length} month${monthKeys.length === 1 ? '' : 's'}</span>
-          <span class="year-sales">Sales ₹${totalSales.toFixed(2)}</span>
-          <span class="year-total">Tax ₹${totalTax.toFixed(2)}</span>
+          <span class="year-sales">Sales ${inr(totalSales)}</span>
+          <span class="year-total">Tax ${inr(totalTax)}</span>
         </summary>
         <table class="month-table">
           <thead><tr><th>Month</th><th>Sales</th><th>Tax</th></tr></thead>
@@ -1483,7 +1489,7 @@ function onGenerate() {
     <div><span class="label">Offline orders</span><span class="value">${offlineOrders.length}${offlineSkipped ? ` <small>(${offlineSkipped} skipped)</small>` : ''}</span></div>
     <div><span class="label">Total invoices</span><span class="value">${combined.length}</span></div>
     <div><span class="label">Invoice range</span><span class="value">${startingInvoiceNo} – ${lastNo}</span></div>
-    <div><span class="label">Total tax</span><span class="value">₹${round2(totalTax).toFixed(2)}</span></div>
+    <div><span class="label">Total tax</span><span class="value">${inr(round2(totalTax))}</span></div>
     <div class="wide filename-tile">
       <span class="label">Filename base (edit to customise)</span>
       <div class="filename-editor">
