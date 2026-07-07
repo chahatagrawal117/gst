@@ -1,0 +1,13 @@
+# Never commit customer data
+*.csv
+
+# Python venv
+gst-venv/
+
+# IDE
+.idea/
+.vscode/
+.claude/
+
+# macOS
+.DS_Store

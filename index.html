@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GST Invoice Generator · SV Graphics</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-logo">📊</span>
+      <span>GST Generator</span>
+    </div>
+    <div class="nav-links">
+      <a href="#new-filing" class="nav-link active" data-view="new-filing">New filing</a>
+      <a href="#history" class="nav-link" data-view="history">History <span id="historyNavCount" class="nav-count" hidden>0</span></a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="view" data-view="new-filing">
+    <section class="card">
+      <h2>Config</h2>
+      <div class="config-grid">
+        <div><span class="label">Home state</span><span class="value">RJ (Rajasthan)</span></div>
+        <div><span class="label">HSN code</span><span class="value">4909</span></div>
+        <div><span class="label">Tax rate</span><span class="value">18%</span></div>
+      </div>
+      <p class="hint">Orders from RJ get CGST+SGST split; all other states get IGST. Offline orders always get IGST.</p>
+    </section>
+
+    <section class="card">
+      <h2>Starting invoice number</h2>
+      <input type="number" id="startingInvoice" placeholder="e.g. 501" min="1" />
+      <p class="hint">The first order (by date) will use this number. Rest are sequential.</p>
+    </section>
+
+    <section class="card">
+      <h2>1. Shopify order export</h2>
+      <label class="file-input">
+        <input type="file" id="shopifyFile" accept=".csv" />
+        <span>Choose Shopify orders_export CSV</span>
+      </label>
+      <div class="inline-config">
+        <label for="minTotal">Skip orders below ₹</label>
+        <input type="number" id="minTotal" min="0" step="1" value="10" />
+        <span class="hint inline">Orders under this value (e.g. ₹1 payment tokens) are skipped.</span>
+      </div>
+      <div id="shopifyStatus" class="status"></div>
+      <button type="button" id="viewShopifyBtn" hidden>View imported orders</button>
+    </section>
+
+    <section class="card">
+      <h2>2. Offline orders</h2>
+      <p class="hint">Three ways to add offline sales: paste rows from your spreadsheet, upload a CSV, or type into the table. Table data auto-saves in your browser.</p>
+
+      <div class="paste-block">
+        <label for="pasteArea" class="paste-label">Paste rows from Excel / Google Sheets</label>
+        <textarea id="pasteArea" rows="4" placeholder="12.05.26	3191	Vestrostyles	2753	495		3248	07DBOPJ8477G1Z0
+10.05.26	3092	Urban Enterprises	61100	10998		72098	29AUYPG8905C1Z6"></textarea>
+        <p class="hint paste-hint">
+          Accepts 8-column format (Date, Invoice#, Party, Amount, GST, IGST, Total, GSTIN) —
+          Invoice# and IGST are ignored, IGST is recomputed. Blank rows are skipped.
+        </p>
+        <div class="row-actions">
+          <button type="button" id="parsePasteBtn" class="primary">Add pasted rows</button>
+          <button type="button" id="clearPasteBtn" class="ghost">Clear paste box</button>
+        </div>
+      </div>
+
+      <label class="file-input">
+        <input type="file" id="offlineFile" accept=".csv" />
+        <span>Or upload offline CSV</span>
+      </label>
+
+      <div class="table-wrap">
+        <table id="offlineTable">
+          <thead>
+            <tr>
+              <th>Date <span class="th-hint">DD.MM.YY</span></th>
+              <th>Party</th>
+              <th>Amount</th>
+              <th>GST</th>
+              <th>Total</th>
+              <th>GSTIN</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="offlineTableBody"></tbody>
+        </table>
+      </div>
+      <div class="row-actions">
+        <button type="button" id="addRowBtn">+ Add row</button>
+        <button type="button" id="clearRowsBtn" class="ghost">Clear all rows</button>
+      </div>
+    </section>
+
+    <section class="card generate">
+      <button type="button" id="generateBtn" class="primary">Generate output</button>
+      <div id="generateStatus" class="status"></div>
+    </section>
+
+    <section class="card" id="resultsCard" hidden>
+      <h2>Results</h2>
+      <div class="summary" id="summary"></div>
+      <div class="download-actions">
+        <button type="button" id="viewResultsBtn" class="primary">View full output</button>
+        <button type="button" id="downloadCombinedBtn">Download combined CSV</button>
+        <button type="button" id="downloadOfflineBtn">Download offline CSV (with new invoice nos)</button>
+      </div>
+      <div class="save-history-block">
+        <button type="button" id="saveToHistoryBtn" class="primary large">Save to filing history</button>
+        <p class="hint">Adds this quarter's summary (period, tax, invoice range, month-wise) to your local history. After saving, download <code>history.json</code> from the History tab and upload it to your repo to sync across devices.</p>
+        <p class="status" id="saveHistoryStatus"></p>
+      </div>
+    </section>
+    </div>
+
+    <div class="view" data-view="history" hidden>
+      <section class="card" id="historyCard">
+        <h2>Filing history</h2>
+        <p class="hint" id="historyRemoteStatus"></p>
+        <div class="row-actions" id="historySyncActions" hidden>
+          <button type="button" id="downloadHistoryBtn" class="primary">Download history.json</button>
+          <details class="sync-instructions">
+            <summary>How to sync across devices</summary>
+            <ol>
+              <li>Click <b>Download history.json</b> above.</li>
+              <li>Open your repo on GitHub (the one hosting this app).</li>
+              <li>If <code>history.json</code> already exists there, click it → pencil icon (Edit) → paste new content. Otherwise click <b>Add file → Upload files</b> and drop the downloaded file.</li>
+              <li>Scroll down, add commit message, click <b>Commit changes</b>.</li>
+              <li>On any other device, open the site — your latest history loads automatically.</li>
+            </ol>
+          </details>
+        </div>
+        <div id="historyEmpty" class="hint" hidden>No filings saved yet. Generate a quarter, then click <b>Save to filing history</b> in the results.</div>
+        <div id="historyTotals" class="summary" hidden></div>
+        <div class="table-wrap" id="historyTableWrap" hidden>
+          <table id="historyTable">
+            <thead>
+              <tr>
+                <th>Filing period</th>
+                <th>Filed at</th>
+                <th>Invoices</th>
+                <th>Range</th>
+                <th>Total tax</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+        <div class="table-wrap" id="historyMonthlyWrap" hidden>
+          <h3 class="subheading">Month-wise tax</h3>
+          <table id="historyMonthlyTable">
+            <thead><tr><th>Month</th><th>Tax</th></tr></thead>
+            <tbody id="historyMonthlyBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-brand">
+      <strong>GST Generator</strong>
+      <span class="footer-sep">·</span>
+      <span>SV Graphics</span>
+    </div>
+    <div class="footer-links">
+      <a href="https://sv-graphics.com" target="_blank" rel="noopener">sv-graphics.com</a>
+    </div>
+    <div class="footer-note">
+      Runs entirely in your browser. No data is uploaded anywhere.
+    </div>
+  </footer>
+
+  <div id="resultsModal" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-tabs" role="tablist">
+          <button type="button" class="modal-tab active" data-tab="combined">Combined output</button>
+          <button type="button" class="modal-tab" data-tab="offline">Offline output</button>
+        </div>
+        <button type="button" class="modal-close" id="resultsModalCloseBtn" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-search-bar">
+          <input type="search" id="resultsSearch" placeholder="Search rows — GSTIN, party name, order #, amount…" autocomplete="off" />
+          <span id="resultsSearchInfo" class="search-info"></span>
+        </div>
+        <div class="tab-panel" data-panel="combined">
+          <div class="modal-toolbar">
+            <div id="resultsCombinedMeta" class="modal-meta"></div>
+            <button type="button" class="primary" id="modalDownloadCombinedBtn">Download this CSV</button>
+          </div>
+          <div class="table-wrap"><table id="resultsCombinedTable"></table></div>
+        </div>
+        <div class="tab-panel" data-panel="offline" hidden>
+          <div class="modal-toolbar">
+            <div id="resultsOfflineMeta" class="modal-meta"></div>
+            <button type="button" class="primary" id="modalDownloadOfflineBtn">Download this CSV</button>
+          </div>
+          <div class="table-wrap"><table id="resultsOfflineTable"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-tabs" role="tablist">
+          <button type="button" class="modal-tab active" data-tab="imported">Imported</button>
+          <button type="button" class="modal-tab" data-tab="skipped">Skipped</button>
+        </div>
+        <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-search-bar">
+          <input type="search" id="importSearch" placeholder="Search rows — order #, GSTIN, party name, state, amount…" autocomplete="off" />
+          <span id="importSearchInfo" class="search-info"></span>
+        </div>
+        <div class="tab-panel" data-panel="imported">
+          <div class="table-wrap"><table id="importedTable"></table></div>
+        </div>
+        <div class="tab-panel" data-panel="skipped" hidden>
+          <p class="hint" id="skippedFilterInfo">
+            An order is skipped when: <b>Total is below the threshold</b> set above (raise or lower it as needed),
+            or Total is not a number, or any of Name / Paid at / Total / Billing Name / Billing Province is empty.
+            Line-item continuation rows from the same order are deduplicated automatically.
+            Edit the highlighted fields and click <b>Recover</b> to move a row into the Imported list.
+          </p>
+          <div class="table-wrap"><table id="skippedTable"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
