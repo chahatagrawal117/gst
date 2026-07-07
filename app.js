@@ -447,6 +447,23 @@ function backfillSales(filings) {
         f.monthlySales[k] = round2(tax * SALES_FROM_TAX);
       }
     }
+    // Derive monthlyOrders proportionally to monthlySales when missing.
+    if (!f.monthlyOrders && f.monthlySales && typeof f.totalInvoices === 'number') {
+      const totalSalesSum = Object.values(f.monthlySales).reduce((a, b) => a + b, 0);
+      if (totalSalesSum > 0) {
+        const keys = Object.keys(f.monthlySales);
+        f.monthlyOrders = {};
+        let remaining = f.totalInvoices;
+        keys.forEach((k, i) => {
+          if (i === keys.length - 1) f.monthlyOrders[k] = remaining;
+          else {
+            const share = Math.round(f.totalInvoices * (f.monthlySales[k] / totalSalesSum));
+            f.monthlyOrders[k] = share;
+            remaining -= share;
+          }
+        });
+      }
+    }
   }
 }
 function loadCachedHistory() {
@@ -589,7 +606,8 @@ function currentFilingSummary() {
     totalTax,
     totalSales: lastResult.totalSales,
     monthlyTax: lastResult.monthlyTax,
-    monthlySales: lastResult.monthlySales
+    monthlySales: lastResult.monthlySales,
+    monthlyOrders: lastResult.monthlyOrders
   };
 }
 
@@ -629,7 +647,7 @@ function updateHistoryNavCount() {
 }
 
 function setupNav() {
-  document.querySelectorAll('.nav-link').forEach(link => {
+  document.querySelectorAll('.nav-link, .nav-brand').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
       switchView(link.dataset.view);
@@ -638,7 +656,7 @@ function setupNav() {
   });
   updateHistoryNavCount();
   const initial = (location.hash || '').replace('#', '');
-  switchView(['new-filing', 'history'].includes(initial) ? initial : 'new-filing');
+  switchView(['dashboard', 'new-filing', 'history'].includes(initial) ? initial : 'dashboard');
 }
 
 function switchView(name) {
@@ -649,6 +667,340 @@ function switchView(name) {
     l.classList.toggle('active', l.dataset.view === name);
   });
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+let dashQuarterlyRange = 'all';
+let dashMonthlyRange = 'all';
+let dashYearlyMetric = 'sales';
+let dashQuarterlyMetric = 'sales';
+let dashMonthlyMetric = 'sales';
+
+function renderDashboard() {
+  const filings = (history.filings || []).slice();
+  sortFilingsByMonth(filings);
+  const kpi = document.getElementById('dashKpis');
+  const empty = document.getElementById('dashEmpty');
+  if (!kpi) return;
+
+  if (filings.length === 0) {
+    kpi.innerHTML = '';
+    if (empty) empty.hidden = false;
+    ['chartYearlySales', 'chartQuarterlySales', 'chartMonthlySales'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
+    return;
+  }
+  if (empty) empty.hidden = true;
+
+  const totalTax = filings.reduce((s, f) => round2(s + (f.totalTax || 0)), 0);
+  const totalSales = filings.reduce((s, f) => round2(s + (f.totalSales || 0)), 0);
+  const totalOrders = filings.reduce((s, f) => s + (f.totalInvoices || 0), 0);
+  const aov = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+  // Distinct months across all filings (from monthlySales keys, which are always present)
+  const monthSet = new Set();
+  for (const f of filings) {
+    for (const k of Object.keys(f.monthlySales || {})) monthSet.add(k);
+  }
+  const nMonths = monthSet.size || 1;
+  const avgMonthlySales = totalSales / nMonths;
+  const avgMonthlyOrders = totalOrders / nMonths;
+  const growth = computeYoyGrowth(filings);
+
+  kpi.innerHTML = `
+    <div class="tile-highlight"><span class="label">Total sales</span><span class="value">${inr(totalSales)}</span></div>
+    <div><span class="label">Total tax filed</span><span class="value">${inr(totalTax)}</span></div>
+    <div><span class="label">Total orders</span><span class="value">${totalOrders.toLocaleString('en-IN')}</span></div>
+    <div><span class="label">Avg order value</span><span class="value">${inr(aov)}</span></div>
+    <div><span class="label">Avg monthly sales</span><span class="value">${inr(avgMonthlySales)}<small> · ${nMonths} months</small></span></div>
+    <div><span class="label">Avg monthly orders</span><span class="value">${Math.round(avgMonthlyOrders).toLocaleString('en-IN')}<small> / month</small></span></div>
+    ${growth ? renderGrowthTile(growth) : ''}
+  `;
+
+  const sub = document.getElementById('dashSubtitle');
+  if (sub) sub.textContent = `${filings.length} filings · ${filings[filings.length-1].filingStart} to ${filings[0].filingEnd}`;
+
+  renderYearlySalesChart(filings);
+  renderQuarterlySalesChart(filings);
+  renderMonthlySalesChart(filings);
+}
+
+function shortQuarterLabel(f) {
+  // "1Jan26" → "Q4 26" (Jan-Mar is Q4 FY, Apr-Jun is Q1 FY, etc.)
+  const parsed = parseFriendlyDateStr(f.filingStart);
+  if (!parsed) return f.filingStart;
+  const m = parsed.month;
+  const qNum = m >= 4 && m <= 6 ? 1 : m >= 7 && m <= 9 ? 2 : m >= 10 && m <= 12 ? 3 : 4;
+  const fy = m >= 4 ? parsed.year : parsed.year - 1;
+  return `Q${qNum}·${String(fy).slice(-2)}-${String((fy+1)%100).padStart(2,'0')}`;
+}
+
+function renderYearlySalesChart(filings) {
+  const byFy = {};
+  for (const f of filings) {
+    if (!f.filingStartYearMonth) continue;
+    const [y, m] = f.filingStartYearMonth.split('-').map(Number);
+    const fy = m >= 4 ? y : y - 1;
+    if (!byFy[fy]) byFy[fy] = { sales: 0, tax: 0, orders: 0, quarters: 0 };
+    byFy[fy].sales = round2(byFy[fy].sales + (f.totalSales || 0));
+    byFy[fy].tax = round2(byFy[fy].tax + (f.totalTax || 0));
+    byFy[fy].orders += (f.totalInvoices || 0);
+    byFy[fy].quarters += 1;
+  }
+  const years = Object.keys(byFy).map(Number).sort((a, b) => a - b);
+  const data = years.map(fy => ({
+    label: `FY ${String(fy).slice(-2)}-${String((fy + 1) % 100).padStart(2, '0')}`,
+    sales: byFy[fy].sales,
+    tax: byFy[fy].tax,
+    orders: byFy[fy].orders,
+    quarters: byFy[fy].quarters
+  }));
+
+  const useOrders = dashYearlyMetric === 'orders';
+  const container = document.getElementById('chartYearlySales');
+  container.innerHTML = drawBarChart(data, {
+    valueKey: useOrders ? 'orders' : 'sales',
+    valueFormatter: useOrders ? (v => v.toLocaleString('en-IN')) : shortInr,
+    subLabel: useOrders ? (d => shortInr(d.sales)) : (d => `${d.orders.toLocaleString('en-IN')} orders`),
+    barColor: useOrders ? 'var(--ok)' : null
+  });
+  attachHoverTooltip(container, data, d =>
+    `<b>${escapeHtml(d.label)}</b><br>` +
+    `Sales: ${inr(d.sales)}<br>` +
+    `Tax: ${inr(d.tax)}<br>` +
+    `Orders: ${d.orders.toLocaleString('en-IN')}<br>` +
+    `Quarters: ${d.quarters}`
+  );
+}
+
+function renderQuarterlySalesChart(filings) {
+  const range = dashQuarterlyRange;
+  const n = range === 'q4' ? 4 : range === 'q8' ? 8 : range === 'q12' ? 12 : Infinity;
+  const trimmed = filings.slice(0, Math.min(n, filings.length));
+  const ordered = trimmed.slice().reverse();
+  const data = ordered.map(f => ({
+    label: shortQuarterLabel(f),
+    sales: f.totalSales || 0,
+    tax: f.totalTax || 0,
+    orders: f.totalInvoices || 0
+  }));
+  const useOrders = dashQuarterlyMetric === 'orders';
+  const container = document.getElementById('chartQuarterlySales');
+  container.innerHTML = drawBarChart(data, {
+    valueKey: useOrders ? 'orders' : 'sales',
+    valueFormatter: useOrders ? (v => v.toLocaleString('en-IN')) : shortInr,
+    subLabel: useOrders ? (d => shortInr(d.sales)) : (d => `${d.orders} orders`),
+    barColor: useOrders ? 'var(--ok)' : null
+  });
+  attachHoverTooltip(container, data, d =>
+    `<b>${escapeHtml(d.label)}</b><br>` +
+    `Sales: ${inr(d.sales)}<br>` +
+    `Tax: ${inr(d.tax)}<br>` +
+    `Orders: ${d.orders.toLocaleString('en-IN')}`
+  );
+}
+
+function renderMonthlySalesChart(filings) {
+  const monthlySales = {}, monthlyOrders = {};
+  for (const f of filings) {
+    const ms = f.monthlySales || {};
+    const mo = f.monthlyOrders || {};
+    for (const k of Object.keys(ms)) monthlySales[k] = round2((monthlySales[k] || 0) + ms[k]);
+    for (const k of Object.keys(mo)) monthlyOrders[k] = (monthlyOrders[k] || 0) + mo[k];
+  }
+  const useOrders = dashMonthlyMetric === 'orders';
+  const primary = useOrders ? monthlyOrders : monthlySales;
+  let keys = Object.keys(primary).sort();
+  const range = dashMonthlyRange;
+  const n = range === 'm6' ? 6 : range === 'm12' ? 12 : range === 'm24' ? 24 : Infinity;
+  if (keys.length > n) keys = keys.slice(-n);
+  const data = keys.map(k => ({
+    label: monthLabelFromKey(k),
+    value: primary[k] || 0,
+    sales: monthlySales[k] || 0,
+    orders: monthlyOrders[k] || 0
+  }));
+  const container = document.getElementById('chartMonthlySales');
+  container.innerHTML = drawLineChart(data, { strokeColor: useOrders ? 'var(--ok)' : null });
+  attachHoverTooltip(container, data, d =>
+    `<b>${escapeHtml(d.label)}</b><br>Sales: ${inr(d.sales)}<br>Orders: ${d.orders.toLocaleString('en-IN')}`
+  );
+}
+
+function attachHoverTooltip(container, dataPoints, formatter) {
+  const tooltip = document.getElementById('chartTooltip');
+  if (!tooltip) return;
+  container.querySelectorAll('[data-point]').forEach(el => {
+    const idx = Number(el.dataset.point);
+    const d = dataPoints[idx];
+    if (!d) return;
+    el.addEventListener('mouseenter', () => {
+      tooltip.hidden = false;
+      tooltip.innerHTML = formatter(d);
+    });
+    el.addEventListener('mousemove', e => {
+      const x = e.clientX + 14;
+      const y = e.clientY + 14;
+      tooltip.style.left = x + 'px';
+      tooltip.style.top = y + 'px';
+    });
+    el.addEventListener('mouseleave', () => { tooltip.hidden = true; });
+  });
+}
+
+function renderOrderMix(filings) {
+  let online = 0, offline = 0;
+  for (const f of filings) {
+    online += f.onlineOrders || 0;
+    offline += f.offlineOrders || 0;
+  }
+  const total = online + offline;
+  const onlinePct = total ? Math.round(online / total * 1000) / 10 : 0;
+  const offlinePct = total ? Math.round(offline / total * 1000) / 10 : 0;
+  const container = document.getElementById('chartOrderMix');
+  container.innerHTML = `
+    <div class="mix-bar">
+      <div class="mix-bar-online" style="flex: ${online}"></div>
+      <div class="mix-bar-offline" style="flex: ${offline || 0.001}"></div>
+    </div>
+    <div class="mix-legend">
+      <div class="mix-item"><span class="mix-swatch mix-online"></span> Online: <b>${online.toLocaleString('en-IN')}</b> orders (${onlinePct}%)</div>
+      <div class="mix-item"><span class="mix-swatch mix-offline"></span> Offline: <b>${offline.toLocaleString('en-IN')}</b> orders (${offlinePct}%)</div>
+    </div>
+  `;
+}
+
+// --- SVG chart primitives ---
+
+function drawBarChart(data, opts = {}) {
+  const valueKey = opts.valueKey || 'value';
+  const fmt = opts.valueFormatter || (v => String(v));
+  const subFmt = opts.subLabel || null;
+  const padBotExtra = subFmt ? 16 : 0;
+  const w = 900, h = 260 + padBotExtra, padL = 12, padR = 12, padTop = 24, padBot = 46 + padBotExtra;
+  const chartH = h - padTop - padBot;
+  const chartW = w - padL - padR;
+  const max = Math.max(...data.map(d => d[valueKey]), 1);
+  const n = data.length;
+  const bandW = chartW / n;
+  const barW = Math.min(bandW * 0.6, 60);
+  const showValueLabels = n <= 14;
+
+  const bars = data.map((d, i) => {
+    const val = d[valueKey];
+    const hgt = (val / max) * chartH;
+    const x = padL + i * bandW + (bandW - barW) / 2;
+    const y = padTop + chartH - hgt;
+    const label = showValueLabels
+      ? `<text x="${x + barW/2}" y="${y - 6}" text-anchor="middle" class="bar-value">${fmt(val).replace('₹', '')}</text>`
+      : '';
+    const sub = subFmt
+      ? `<text x="${x + barW/2}" y="${padTop + chartH + 32}" text-anchor="middle" class="bar-sublabel">${escapeHtml(subFmt(d))}</text>`
+      : '';
+    const fillAttr = opts.barColor ? ` style="fill:${opts.barColor}"` : '';
+    return `
+      <g class="bar-group">
+        <rect x="${x}" y="${y}" width="${barW}" height="${hgt}" rx="3" class="bar-rect" data-point="${i}"${fillAttr}></rect>
+        ${label}
+        <text x="${x + barW/2}" y="${padTop + chartH + 16}" text-anchor="middle" class="bar-label">${escapeHtml(d.label)}</text>
+        ${sub}
+      </g>
+    `;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" class="chart-svg">${bars}</svg>`;
+}
+
+function shortInr(v) {
+  if (v >= 10000000) return '₹' + (v / 10000000).toFixed(2) + 'Cr';
+  if (v >= 100000) return '₹' + (v / 100000).toFixed(2) + 'L';
+  if (v >= 1000) return '₹' + (v / 1000).toFixed(1) + 'K';
+  return '₹' + Math.round(v);
+}
+
+function drawLineChart(data, opts = {}) {
+  const w = 900, h = 220, padL = 12, padR = 12, padTop = 20, padBot = 40;
+  const chartH = h - padTop - padBot;
+  const chartW = w - padL - padR;
+  const max = Math.max(...data.map(d => d.value), 1);
+  const n = data.length;
+  const stepX = n > 1 ? chartW / (n - 1) : 0;
+
+  const points = data.map((d, i) => {
+    const x = padL + i * stepX;
+    const y = padTop + chartH - (d.value / max) * chartH;
+    return { x, y, d, i };
+  });
+
+  const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+  const areaD = pathD + ` L${padL + (n-1)*stepX},${padTop + chartH} L${padL},${padTop + chartH} Z`;
+  const dots = points.map(p =>
+    `<circle cx="${p.x}" cy="${p.y}" r="3.5" class="line-dot"></circle>`
+  ).join('');
+  // Bigger invisible hit area for hover — inline attributes to be sure fill is transparent
+  const hits = points.map(p =>
+    `<circle cx="${p.x}" cy="${p.y}" r="10" fill="transparent" stroke="none" style="cursor:pointer" data-point="${p.i}"></circle>`
+  ).join('');
+
+  const stride = Math.max(1, Math.ceil(n / 12));
+  const labels = points.map((p, i) => (i % stride === 0 || i === n - 1)
+    ? `<text x="${p.x}" y="${padTop + chartH + 16}" text-anchor="middle" class="bar-label">${escapeHtml(p.d.label)}</text>`
+    : ''
+  ).join('');
+
+  const strokeStyle = opts.strokeColor ? ` style="stroke:${opts.strokeColor}"` : '';
+  const areaStyle = opts.strokeColor ? ` style="fill:rgba(47,133,90,0.12)"` : '';
+  const dotStyle = opts.strokeColor ? ` style="fill:${opts.strokeColor}"` : '';
+  return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" class="chart-svg">
+    <path d="${areaD}" class="line-area"${areaStyle}/>
+    <path d="${pathD}" class="line-stroke" fill="none"${strokeStyle}/>
+    ${dots.replace(/<circle/g, dotStyle ? `<circle${dotStyle}` : '<circle')}
+    ${labels}
+    ${hits}
+  </svg>`;
+}
+
+function computeYoyGrowth(filings) {
+  // Group by fiscal year (using filingStartYearMonth) and compare latest FY's
+  // sales to the SAME quarters of the previous FY. This gives a fair
+  // year-over-year number even when the current FY isn't complete yet.
+  const byFy = {};
+  for (const f of filings) {
+    if (!f.filingStartYearMonth) continue;
+    const [y, m] = f.filingStartYearMonth.split('-').map(Number);
+    const fy = m >= 4 ? y : y - 1;
+    (byFy[fy] = byFy[fy] || []).push({ startMonth: m, sales: f.totalSales || 0 });
+  }
+  const years = Object.keys(byFy).map(Number).sort((a, b) => b - a);
+  if (years.length < 2) return null;
+  const latestFy = years[0], prevFy = years[1];
+  const latestQuarters = byFy[latestFy];
+  const latestStartMonths = new Set(latestQuarters.map(q => q.startMonth));
+  const matchingPrev = byFy[prevFy].filter(q => latestStartMonths.has(q.startMonth));
+  const latestTotal = latestQuarters.reduce((s, q) => s + q.sales, 0);
+  const prevTotal = matchingPrev.reduce((s, q) => s + q.sales, 0);
+  if (prevTotal === 0) return null;
+  const pct = ((latestTotal - prevTotal) / prevTotal) * 100;
+  const samePeriod = latestQuarters.length < 4;
+  return { latestFy, prevFy, latestTotal, prevTotal, pct, samePeriod };
+}
+
+function fyLabel(fy) {
+  return `FY ${String(fy).slice(-2)}-${String((fy + 1) % 100).padStart(2, '0')}`;
+}
+
+function renderGrowthTile(g) {
+  const up = g.pct >= 0;
+  const arrow = up ? '↑' : '↓';
+  const sign = up ? '+' : '';
+  const cls = up ? 'tile-growth-up' : 'tile-growth-down';
+  const label = g.samePeriod ? 'YoY (same period)' : 'YoY growth';
+  return `<div class="${cls}">
+    <span class="label">${label}</span>
+    <span class="value">${sign}${g.pct.toFixed(0)}% ${arrow}</span>
+    <span class="growth-detail">${fyLabel(g.latestFy)} vs ${fyLabel(g.prevFy)}</span>
+  </div>`;
 }
 
 function computeSyncDelta() {
@@ -719,10 +1071,11 @@ function renderHistoryCard() {
   totals.hidden = false;
   totals.innerHTML = `
     <div><span class="label">Filings recorded</span><span class="value">${filings.length}</span></div>
-    <div><span class="label">Total invoices</span><span class="value">${totalInvoices.toLocaleString('en-IN')}</span></div>
+    <div><span class="label">Total orders</span><span class="value">${totalInvoices.toLocaleString('en-IN')}</span></div>
     <div class="tile-highlight"><span class="label">Total sales</span><span class="value">${inr(totalSales)}</span></div>
     <div><span class="label">Total tax filed</span><span class="value">${inr(totalTax)}</span></div>
   `;
+  renderDashboard();
 
   tableWrap.hidden = false;
   const tbody = document.getElementById('historyTableBody');
@@ -892,6 +1245,32 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   setupNav();
+
+  const qSel = document.getElementById('quarterlyRange');
+  if (qSel) qSel.addEventListener('change', () => {
+    dashQuarterlyRange = qSel.value;
+    renderDashboard();
+  });
+  const mSel = document.getElementById('monthlyRange');
+  if (mSel) mSel.addEventListener('change', () => {
+    dashMonthlyRange = mSel.value;
+    renderDashboard();
+  });
+  const yMet = document.getElementById('yearlyMetric');
+  if (yMet) yMet.addEventListener('change', () => {
+    dashYearlyMetric = yMet.value;
+    renderDashboard();
+  });
+  const qMet = document.getElementById('quarterlyMetric');
+  if (qMet) qMet.addEventListener('change', () => {
+    dashQuarterlyMetric = qMet.value;
+    renderDashboard();
+  });
+  const mMet = document.getElementById('monthlyMetric');
+  if (mMet) mMet.addEventListener('change', () => {
+    dashMonthlyMetric = mMet.value;
+    renderDashboard();
+  });
 
   document.getElementById('downloadHistoryBtn').addEventListener('click', () => {
     const content = JSON.stringify(history, null, 2) + '\n';
@@ -1458,22 +1837,24 @@ function onGenerate() {
 
   const lastNo = startingInvoiceNo + combined.length - 1;
 
-  // Month-wise tax and sales breakdown (keys: "YYYY-MM")
+  // Month-wise tax, sales, orders breakdown (keys: "YYYY-MM")
   const monthlyTax = {};
   const monthlySales = {};
+  const monthlyOrders = {};
   for (const order of combined) {
     const key = `${order._dateObj.year}-${String(order._dateObj.month).padStart(2, '0')}`;
     const rowTotal = Number(order['Total Transaction Value']);
     const rowTax = rowTotal - Number(order['Item Taxable Value']);
     monthlyTax[key] = round2((monthlyTax[key] || 0) + rowTax);
     monthlySales[key] = round2((monthlySales[key] || 0) + rowTotal);
+    monthlyOrders[key] = (monthlyOrders[key] || 0) + 1;
   }
   const totalSales = Object.values(monthlySales).reduce((a, b) => round2(a + b), 0);
 
   lastResult = {
     combined, combinedCsv, offlineCsv, offlineOutputRows, invoiceMap, startingInvoiceNo,
     firstStr, lastStr, rangeLabel, filenameBase, lastNo, counterSaved: false,
-    monthlyTax, monthlySales, totalSales,
+    monthlyTax, monthlySales, monthlyOrders, totalSales,
     filingStart, filingEnd,
     onlineCount: shopifyOrders.length, offlineCount: offlineOrders.length
   };

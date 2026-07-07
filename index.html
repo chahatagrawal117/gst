@@ -10,17 +10,77 @@
 </head>
 <body>
   <nav class="navbar">
-    <div class="nav-brand">
+    <a class="nav-brand" href="#dashboard" data-view="dashboard">
       <span class="nav-logo">📊</span>
       <span>GST Generator</span>
-    </div>
+    </a>
     <div class="nav-links">
-      <a href="#new-filing" class="nav-link active" data-view="new-filing">New filing</a>
+      <a href="#dashboard" class="nav-link active" data-view="dashboard">Dashboard</a>
+      <a href="#new-filing" class="nav-link" data-view="new-filing">New filing</a>
       <a href="#history" class="nav-link" data-view="history">History <span id="historyNavCount" class="nav-count" hidden>0</span></a>
     </div>
   </nav>
 
   <main>
+    <div class="view" data-view="dashboard" hidden>
+      <section class="card" id="dashboardCard">
+        <div class="dash-header">
+          <h2>Dashboard</h2>
+          <p class="hint" id="dashSubtitle">Business overview across all filings.</p>
+        </div>
+        <div class="summary" id="dashKpis"></div>
+      </section>
+      <section class="card">
+        <div class="chart-header">
+          <h3 class="chart-title">Yearly summary <span class="chart-sub">(fiscal year Apr–Mar)</span></h3>
+          <select id="yearlyMetric" class="chart-filter">
+            <option value="sales">Sales</option>
+            <option value="orders">Orders</option>
+          </select>
+        </div>
+        <div class="chart-container" id="chartYearlySales"></div>
+      </section>
+      <section class="card">
+        <div class="chart-header">
+          <h3 class="chart-title">Quarterly summary</h3>
+          <div class="chart-controls">
+            <select id="quarterlyMetric" class="chart-filter">
+              <option value="sales">Sales</option>
+              <option value="orders">Orders</option>
+            </select>
+            <select id="quarterlyRange" class="chart-filter">
+              <option value="all">All time</option>
+              <option value="q4">Last 4 quarters</option>
+              <option value="q8">Last 8 quarters</option>
+              <option value="q12">Last 12 quarters</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-container" id="chartQuarterlySales"></div>
+      </section>
+      <section class="card">
+        <div class="chart-header">
+          <h3 class="chart-title">Monthly trend</h3>
+          <div class="chart-controls">
+            <select id="monthlyMetric" class="chart-filter">
+              <option value="sales">Sales</option>
+              <option value="orders">Orders</option>
+            </select>
+            <select id="monthlyRange" class="chart-filter">
+              <option value="all">All time</option>
+              <option value="m6">Last 6 months</option>
+              <option value="m12">Last 12 months</option>
+              <option value="m24">Last 24 months</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-container" id="chartMonthlySales"></div>
+      </section>
+      <div id="dashEmpty" class="card" hidden>
+        <p class="hint">No filings yet. Go to <a href="#new-filing">New filing</a> to generate your first quarter, then click "Save to filing history".</p>
+      </div>
+    </div>
+
     <div class="view" data-view="new-filing">
     <section class="card">
       <h2>Config</h2>
@@ -246,6 +306,8 @@
       </div>
     </div>
   </div>
+
+  <div id="chartTooltip" class="chart-tooltip" hidden></div>
 
   <script src="app.js"></script>
 </body>
