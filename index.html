@@ -124,15 +124,24 @@
         <h2>Filing history</h2>
         <p class="hint" id="historyRemoteStatus"></p>
         <div class="sync-panel" id="historySyncActions" hidden>
-          <button type="button" id="syncNowBtn" class="primary large">Sync now → open GitHub</button>
-          <p class="hint sync-steps">
-            Copies your history to clipboard and opens GitHub in a new tab.
-            There, press <kbd>⌘</kbd>+<kbd>A</kbd> to select all → <kbd>⌘</kbd>+<kbd>V</kbd> to paste → scroll down → click <b>Commit changes</b>. That's it.
-          </p>
-          <p class="hint">
-            <a href="#" id="downloadHistoryBtn">Or download history.json manually</a> ·
-            <span id="syncNowFeedback"></span>
-          </p>
+          <div class="sync-primary">
+            <button type="button" id="syncNowBtn" class="primary large">Sync now → open GitHub</button>
+            <p class="sync-steps">
+              Copies your history to clipboard and opens GitHub in a new tab. There:
+              <kbd>⌘</kbd>+<kbd>A</kbd> → <kbd>⌘</kbd>+<kbd>V</kbd> → click <b>Commit changes</b>.
+            </p>
+          </div>
+          <div class="sync-secondary">
+            <button type="button" id="copyJsonBtn">📋 Copy JSON</button>
+            <button type="button" id="downloadHistoryBtn">💾 Download file</button>
+            <button type="button" id="refreshHistoryBtn">🔄 Refresh from GitHub</button>
+          </div>
+          <div class="sync-hint">
+            <b>Copy JSON</b>: just copies, you paste manually anywhere.
+            <b>Download</b>: save as file for upload.
+            <b>Refresh</b>: re-fetch latest history.json and discard local changes (use if you deleted something by mistake).
+          </div>
+          <p id="syncNowFeedback" class="sync-feedback"></p>
         </div>
         <div id="historyEmpty" class="hint" hidden>No filings saved yet. Generate a quarter, then click <b>Save to filing history</b> in the results.</div>
         <div id="historyTotals" class="summary" hidden></div>

@@ -672,7 +672,7 @@ function renderHistoryCard() {
   updateHistoryNavCount();
   renderSyncStatus();
   const syncActions = document.getElementById('historySyncActions');
-  if (syncActions) syncActions.hidden = filings.length === 0 && !computeSyncDelta().pendingDeletes;
+  if (syncActions) syncActions.hidden = filings.length === 0 && !remoteSnapshot;
 
   const empty = document.getElementById('historyEmpty');
   const totals = document.getElementById('historyTotals');
@@ -832,8 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupNav();
 
-  document.getElementById('downloadHistoryBtn').addEventListener('click', e => {
-    e.preventDefault();
+  document.getElementById('downloadHistoryBtn').addEventListener('click', () => {
     const content = JSON.stringify(history, null, 2) + '\n';
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -844,6 +843,39 @@ document.addEventListener('DOMContentLoaded', () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setSyncFeedback('ok', 'history.json downloaded. Drop it into your repo on GitHub.');
+  });
+
+  document.getElementById('copyJsonBtn').addEventListener('click', async () => {
+    const content = JSON.stringify(history, null, 2) + '\n';
+    const ok = await copyToClipboard(content);
+    if (ok) setSyncFeedback('ok', 'JSON copied to clipboard.');
+    else setSyncFeedback('err', 'Copy failed. Try the Download button instead.');
+  });
+
+  document.getElementById('refreshHistoryBtn').addEventListener('click', async () => {
+    const delta = computeSyncDelta();
+    if (delta.pendingAdds > 0 || delta.pendingDeletes > 0) {
+      const msg = `You have local changes not yet uploaded:\n` +
+        (delta.pendingAdds ? `  · ${delta.pendingAdds} new filing(s) added locally\n` : '') +
+        (delta.pendingDeletes ? `  · ${delta.pendingDeletes} filing(s) deleted locally\n` : '') +
+        `\nRefreshing will DISCARD these and reload from GitHub. Continue?`;
+      if (!confirm(msg)) return;
+    }
+    setSyncFeedback('info', 'Fetching latest from GitHub…');
+    const remote = await fetchRemoteHistory();
+    if (!remote) {
+      setSyncFeedback('err', 'Could not reach GitHub or history.json does not exist yet.');
+      return;
+    }
+    remoteSnapshot = remote;
+    history = { version: HISTORY_VERSION, filings: [...remote.filings] };
+    tombstones.clear();
+    saveTombstones(tombstones);
+    cacheHistory(history);
+    renderHistoryCard();
+    refreshStartingInvoicePrefill();
+    setSyncFeedback('ok', `Refreshed. ${history.filings.length} filings loaded from GitHub.`);
   });
 
   document.getElementById('syncNowBtn').addEventListener('click', async () => {
@@ -861,13 +893,16 @@ document.addEventListener('DOMContentLoaded', () => {
       : `https://github.com/${info.owner}/${info.repo}/new/main?filename=history.json`;
     window.open(url, '_blank', 'noopener');
 
-    const fb = document.getElementById('syncNowFeedback');
-    if (copied) {
-      fb.innerHTML = '<span class="sync-clean">✓ JSON copied. GitHub tab opened — paste and commit.</span>';
-    } else {
-      fb.innerHTML = '<span class="sync-dirty">Clipboard blocked. Use "Download history.json manually" then drop the file into the GitHub tab.</span>';
-    }
+    if (copied) setSyncFeedback('ok', 'JSON copied. GitHub tab opened — paste (⌘+V) and click Commit.');
+    else setSyncFeedback('err', 'Clipboard blocked. Use "Download file" and drop it into the GitHub tab.');
   });
+
+  function setSyncFeedback(kind, msg) {
+    const fb = document.getElementById('syncNowFeedback');
+    if (!fb) return;
+    fb.textContent = msg;
+    fb.className = 'sync-feedback ' + kind;
+  }
 
   // history.json in the repo is the database. Always fetch on load; local cache is a
   // fallback for offline access + pending-upload state.
