@@ -527,15 +527,15 @@ function sortFilingsByMonth(filings) {
   return filings;
 }
 
-function maxInvoiceFromHistory() {
+function latestQuarterInvoiceEnd() {
+  // Use the LATEST quarter's invoice range end (not the global max across all
+  // quarters) because the invoice sequence can be reset — e.g. going from
+  // 2160 back down to 125 for a new numbering cycle.
   const filings = history.filings || [];
-  let max = 0;
-  for (const f of filings) {
-    if (typeof f.invoiceRangeEnd === 'number' && f.invoiceRangeEnd > max) {
-      max = f.invoiceRangeEnd;
-    }
-  }
-  return max;
+  if (filings.length === 0) return 0;
+  sortFilingsByMonth(filings);
+  const latest = filings[0];
+  return typeof latest.invoiceRangeEnd === 'number' ? latest.invoiceRangeEnd : 0;
 }
 
 // ---------------- State ----------------
@@ -921,13 +921,15 @@ document.addEventListener('DOMContentLoaded', () => {
 function refreshStartingInvoicePrefill() {
   const startingInput = document.getElementById('startingInvoice');
   if (!startingInput) return;
-  const historyMax = maxInvoiceFromHistory();
+  const latestEnd = latestQuarterInvoiceEnd();
+  const filings = history.filings || [];
+  const latestPeriod = filings.length ? filings[0].period : null;
   const lastLocal = loadLastInvoice();
   let suggested = null;
   let source = '';
-  if (historyMax > 0) {
-    suggested = historyMax + 1;
-    source = `next after highest in history (#${historyMax})`;
+  if (latestEnd > 0) {
+    suggested = latestEnd + 1;
+    source = `next after last invoice (#${latestEnd}) from latest filing (${latestPeriod})`;
   } else if (lastLocal != null) {
     suggested = lastLocal + 1;
     source = `next after last local download (#${lastLocal})`;
