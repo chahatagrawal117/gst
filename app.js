@@ -677,13 +677,13 @@ function renderHistoryCard() {
   const empty = document.getElementById('historyEmpty');
   const totals = document.getElementById('historyTotals');
   const tableWrap = document.getElementById('historyTableWrap');
-  const monthlyWrap = document.getElementById('historyMonthlyWrap');
+  const yearlyWrap = document.getElementById('historyYearlyWrap');
 
   if (filings.length === 0) {
     empty.hidden = false;
     totals.hidden = true;
     tableWrap.hidden = true;
-    monthlyWrap.hidden = true;
+    yearlyWrap.hidden = true;
     return;
   }
   empty.hidden = true;
@@ -724,14 +724,38 @@ function renderHistoryCard() {
       monthTotals[k] = round2((monthTotals[k] || 0) + m[k]);
     }
   }
-  const sortedMonths = Object.keys(monthTotals).sort().reverse();
-  if (sortedMonths.length) {
-    monthlyWrap.hidden = false;
-    document.getElementById('historyMonthlyBody').innerHTML = sortedMonths.map(k => `
-      <tr><td>${monthLabelFromKey(k)}</td><td>₹${monthTotals[k].toFixed(2)}</td></tr>
-    `).join('');
+
+  const byFy = {};
+  for (const [key, tax] of Object.entries(monthTotals)) {
+    const [year, month] = key.split('-').map(Number);
+    const fyStart = month >= 4 ? year : year - 1;
+    if (!byFy[fyStart]) byFy[fyStart] = { total: 0, months: {} };
+    byFy[fyStart].months[key] = tax;
+    byFy[fyStart].total = round2(byFy[fyStart].total + tax);
+  }
+  const fyList = Object.keys(byFy).map(Number).sort((a, b) => b - a);
+
+  if (fyList.length) {
+    yearlyWrap.hidden = false;
+    document.getElementById('historyYearlyBody').innerHTML = fyList.map((fy, idx) => {
+      const { total, months } = byFy[fy];
+      const monthKeys = Object.keys(months).sort().reverse();
+      const rows = monthKeys.map(k =>
+        `<tr><td>${monthLabelFromKey(k)}</td><td>₹${months[k].toFixed(2)}</td></tr>`
+      ).join('');
+      const label = `FY ${String(fy).slice(-2)}-${String((fy + 1) % 100).padStart(2, '0')}`;
+      const open = idx === 0 ? ' open' : '';
+      return `<details class="year-row"${open}>
+        <summary>
+          <span class="year-label">${label}</span>
+          <span class="year-count">${monthKeys.length} month${monthKeys.length === 1 ? '' : 's'}</span>
+          <span class="year-total">₹${total.toFixed(2)}</span>
+        </summary>
+        <table class="month-table"><tbody>${rows}</tbody></table>
+      </details>`;
+    }).join('');
   } else {
-    monthlyWrap.hidden = true;
+    yearlyWrap.hidden = true;
   }
 }
 
