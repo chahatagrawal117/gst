@@ -123,18 +123,16 @@
       <section class="card" id="historyCard">
         <h2>Filing history</h2>
         <p class="hint" id="historyRemoteStatus"></p>
-        <div class="row-actions" id="historySyncActions" hidden>
-          <button type="button" id="downloadHistoryBtn" class="primary">Download history.json</button>
-          <details class="sync-instructions">
-            <summary>How to sync across devices</summary>
-            <ol>
-              <li>Click <b>Download history.json</b> above.</li>
-              <li>Open your repo on GitHub (the one hosting this app).</li>
-              <li>If <code>history.json</code> already exists there, click it → pencil icon (Edit) → paste new content. Otherwise click <b>Add file → Upload files</b> and drop the downloaded file.</li>
-              <li>Scroll down, add commit message, click <b>Commit changes</b>.</li>
-              <li>On any other device, open the site — your latest history loads automatically.</li>
-            </ol>
-          </details>
+        <div class="sync-panel" id="historySyncActions" hidden>
+          <button type="button" id="syncNowBtn" class="primary large">Sync now → open GitHub</button>
+          <p class="hint sync-steps">
+            Copies your history to clipboard and opens GitHub in a new tab.
+            There, press <kbd>⌘</kbd>+<kbd>A</kbd> to select all → <kbd>⌘</kbd>+<kbd>V</kbd> to paste → scroll down → click <b>Commit changes</b>. That's it.
+          </p>
+          <p class="hint">
+            <a href="#" id="downloadHistoryBtn">Or download history.json manually</a> ·
+            <span id="syncNowFeedback"></span>
+          </p>
         </div>
         <div id="historyEmpty" class="hint" hidden>No filings saved yet. Generate a quarter, then click <b>Save to filing history</b> in the results.</div>
         <div id="historyTotals" class="summary" hidden></div>

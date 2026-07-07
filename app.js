@@ -447,6 +447,36 @@ function saveTombstones(s) {
   try { localStorage.setItem(LS_TOMBSTONES, JSON.stringify([...s])); } catch (_) {}
 }
 
+function detectRepoInfo() {
+  const host = location.hostname;
+  const parts = location.pathname.split('/').filter(Boolean);
+  if (host.endsWith('.github.io')) {
+    const owner = host.replace('.github.io', '');
+    if (parts.length > 0) return { owner, repo: parts[0] };
+    return { owner, repo: `${owner}.github.io` };
+  }
+  return null;
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (_) { return false; }
+  }
+}
+
 async function fetchRemoteHistory() {
   try {
     const resp = await fetch('history.json', { cache: 'no-store' });
@@ -802,7 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupNav();
 
-  document.getElementById('downloadHistoryBtn').addEventListener('click', () => {
+  document.getElementById('downloadHistoryBtn').addEventListener('click', e => {
+    e.preventDefault();
     const content = JSON.stringify(history, null, 2) + '\n';
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -813,6 +844,29 @@ document.addEventListener('DOMContentLoaded', () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('syncNowBtn').addEventListener('click', async () => {
+    const info = detectRepoInfo();
+    if (!info) {
+      alert('Repo auto-detect only works when the app is deployed to GitHub Pages.\n' +
+            'On localhost, please use "Download history.json manually" instead.');
+      return;
+    }
+    const content = JSON.stringify(history, null, 2) + '\n';
+    const copied = await copyToClipboard(content);
+    const exists = remoteSnapshot !== null;
+    const url = exists
+      ? `https://github.com/${info.owner}/${info.repo}/edit/main/history.json`
+      : `https://github.com/${info.owner}/${info.repo}/new/main?filename=history.json`;
+    window.open(url, '_blank', 'noopener');
+
+    const fb = document.getElementById('syncNowFeedback');
+    if (copied) {
+      fb.innerHTML = '<span class="sync-clean">✓ JSON copied. GitHub tab opened — paste and commit.</span>';
+    } else {
+      fb.innerHTML = '<span class="sync-dirty">Clipboard blocked. Use "Download history.json manually" then drop the file into the GitHub tab.</span>';
+    }
   });
 
   // history.json in the repo is the database. Always fetch on load; local cache is a
