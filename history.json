@@ -2,8 +2,27 @@
   "version": 1,
   "filings": [
     {
+      "id": "1Apr26_30Jun26_gst_sheet",
+      "period": "1Apr26 → 30Jun26 (orders: 1Apr26 – 30Jun26)",
+      "filingStart": "1Apr26",
+      "filingEnd": "30Jun26",
+      "filingStartYearMonth": "2026-04",
+      "generatedAt": "2026-07-07T16:37:40.662Z",
+      "onlineOrders": 96,
+      "offlineOrders": 25,
+      "totalInvoices": 121,
+      "invoiceRangeStart": 636,
+      "invoiceRangeEnd": 756,
+      "totalTax": 43705.23,
+      "monthlyTax": {
+        "2026-04": 11935.54,
+        "2026-05": 18927.6,
+        "2026-06": 12842.09
+      }
+    },
+    {
       "id": "1Jan26_31Mar26_gst_sheet",
-      "period": "1Jan26 \u2192 31Mar26",
+      "period": "1Jan26 → 31Mar26",
       "filingStart": "1Jan26",
       "filingEnd": "31Mar26",
       "filingStartYearMonth": "2026-01",
@@ -22,7 +41,7 @@
     },
     {
       "id": "1Oct25_31Dec25_gst_sheet",
-      "period": "1Oct25 \u2192 31Dec25",
+      "period": "1Oct25 → 31Dec25",
       "filingStart": "1Oct25",
       "filingEnd": "31Dec25",
       "filingStartYearMonth": "2025-10",
@@ -41,7 +60,7 @@
     },
     {
       "id": "1Jul25_30Sep25_gst_sheet",
-      "period": "1Jul25 \u2192 30Sep25",
+      "period": "1Jul25 → 30Sep25",
       "filingStart": "1Jul25",
       "filingEnd": "30Sep25",
       "filingStartYearMonth": "2025-07",
@@ -60,7 +79,7 @@
     },
     {
       "id": "1Apr25_30Jun25_gst_sheet",
-      "period": "1Apr25 \u2192 30Jun25",
+      "period": "1Apr25 → 30Jun25",
       "filingStart": "1Apr25",
       "filingEnd": "30Jun25",
       "filingStartYearMonth": "2025-04",
@@ -79,7 +98,7 @@
     },
     {
       "id": "1Jan25_31Mar25_gst_sheet",
-      "period": "1Jan25 \u2192 31Mar25",
+      "period": "1Jan25 → 31Mar25",
       "filingStart": "1Jan25",
       "filingEnd": "31Mar25",
       "filingStartYearMonth": "2025-01",
@@ -98,7 +117,7 @@
     },
     {
       "id": "1Oct24_31Dec24_gst_sheet",
-      "period": "1Oct24 \u2192 31Dec24",
+      "period": "1Oct24 → 31Dec24",
       "filingStart": "1Oct24",
       "filingEnd": "31Dec24",
       "filingStartYearMonth": "2024-10",
@@ -117,7 +136,7 @@
     },
     {
       "id": "1Jul24_30Sep24_gst_sheet",
-      "period": "1Jul24 \u2192 30Sep24",
+      "period": "1Jul24 → 30Sep24",
       "filingStart": "1Jul24",
       "filingEnd": "30Sep24",
       "filingStartYearMonth": "2024-07",
@@ -136,7 +155,7 @@
     },
     {
       "id": "1Apr24_30Jun24_gst_sheet",
-      "period": "1Apr24 \u2192 30Jun24",
+      "period": "1Apr24 → 30Jun24",
       "filingStart": "1Apr24",
       "filingEnd": "30Jun24",
       "filingStartYearMonth": "2024-04",
@@ -155,7 +174,7 @@
     },
     {
       "id": "1Jan24_31Mar24_gst_sheet",
-      "period": "1Jan24 \u2192 31Mar24",
+      "period": "1Jan24 → 31Mar24",
       "filingStart": "1Jan24",
       "filingEnd": "31Mar24",
       "filingStartYearMonth": "2024-01",
@@ -174,7 +193,7 @@
     },
     {
       "id": "1Oct23_31Dec23_gst_sheet",
-      "period": "1Oct23 \u2192 31Dec23",
+      "period": "1Oct23 → 31Dec23",
       "filingStart": "1Oct23",
       "filingEnd": "31Dec23",
       "filingStartYearMonth": "2023-10",
