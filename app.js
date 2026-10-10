@@ -50,6 +50,46 @@ function getStateName(code) {
   return STATE_NAMES[key] || code;
 }
 
+const GSTIN_STATE_PREFIX = {
+  '01': 'Jammu and Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab',
+  '04': 'Chandigarh', '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi',
+  '08': 'Rajasthan', '09': 'Uttar Pradesh', '10': 'Bihar', '11': 'Sikkim',
+  '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
+  '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam',
+  '19': 'West Bengal', '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh',
+  '23': 'Madhya Pradesh', '24': 'Gujarat',
+  '25': 'Dadra and Nagar Haveli and Daman and Diu',
+  '26': 'Dadra and Nagar Haveli and Daman and Diu',
+  '27': 'Maharashtra', '28': 'Andhra Pradesh (Old)', '29': 'Karnataka',
+  '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu',
+  '34': 'Puducherry', '35': 'Andaman and Nicobar Islands',
+  '36': 'Telangana', '37': 'Andhra Pradesh', '38': 'Ladakh',
+  '97': 'Other Territory', '99': 'Centre'
+};
+const GSTIN_PATTERN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const GSTIN_CHARSET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function gstinChecksum(first14) {
+  let sum = 0;
+  for (let i = 0; i < 14; i++) {
+    const val = GSTIN_CHARSET.indexOf(first14[i]);
+    const weight = (i % 2 === 0) ? 1 : 2;
+    const product = val * weight;
+    sum += Math.floor(product / 36) + (product % 36);
+  }
+  return GSTIN_CHARSET[(36 - (sum % 36)) % 36];
+}
+function validateGSTIN(gstin) {
+  const g = String(gstin || '').trim().toUpperCase();
+  if (!g || g === '-') return { valid: true, empty: true };
+  if (g.length !== 15) return { valid: false, reason: `length is ${g.length}, expected 15` };
+  if (!GSTIN_PATTERN.test(g)) return { valid: false, reason: 'format mismatch' };
+  const prefix = g.substring(0, 2);
+  if (!GSTIN_STATE_PREFIX[prefix]) return { valid: false, reason: `unknown state code "${prefix}"` };
+  const expected = gstinChecksum(g.substring(0, 14));
+  if (expected !== g[14]) return { valid: false, reason: `checksum mismatch (expected "${expected}", got "${g[14]}")` };
+  return { valid: true };
+}
+
 const OFFLINE_COLUMNS = ['Date', 'Party', 'Amount', 'GST', 'Total', 'GSTIN'];
 const OUTPUT_HEADING = [
   'Invoice Number', 'Invoice Date', 'Customer Billing Name', 'Customer Billing GSTIN',
@@ -231,10 +271,12 @@ function tryBuildOnlineOrder(raw, minTotal) {
 function processOfflineRows(rows) {
   const orders = [];
   const originalRows = [];
+  const gstinWarnings = [];
   let skipped = 0;
   let tempNo = 0;
 
-  for (const row of rows) {
+  for (let sheetIdx = 0; sheetIdx < rows.length; sheetIdx++) {
+    const row = rows[sheetIdx];
     const dateStr = String(row['Date'] || '').trim();
     if (!dateStr) continue;
     const totalStr = String(row['Total'] || '').trim();
@@ -245,6 +287,17 @@ function processOfflineRows(rows) {
     tempNo++;
     const parsed = parseOfflineDate(dateStr);
     const tax = computeTax(total, 'OTHER');
+
+    const gstinRaw = String(row['GSTIN'] || '').trim();
+    const check = validateGSTIN(gstinRaw);
+    if (!check.valid) {
+      gstinWarnings.push({
+        sheetRow: sheetIdx + 1,
+        party: String(row['Party'] || '').trim() || '(no party)',
+        gstin: gstinRaw,
+        reason: check.reason
+      });
+    }
 
     orders.push({
       _source: 'offline',
@@ -275,7 +328,7 @@ function processOfflineRows(rows) {
       GSTIN: String(row['GSTIN'] || '').trim()
     });
   }
-  return { orders, originalRows, skipped };
+  return { orders, originalRows, skipped, gstinWarnings };
 }
 
 function combineAndRenumber(shopifyOrders, offlineOrders, startingInvoiceNo) {
@@ -1236,12 +1289,12 @@ document.addEventListener('DOMContentLoaded', () => {
   setupModalTabs(document.getElementById('resultsModal'));
   document.getElementById('viewResultsBtn').addEventListener('click', openResultsModal);
   document.getElementById('modalDownloadCombinedBtn').addEventListener('click', () => {
-    if (!lastResult) return;
+    if (!lastResult || hasBlockingGstinWarnings()) return;
     downloadCsv(lastResult.combinedCsv, `${currentFilenameBase()}.csv`);
     persistLastInvoiceAfterDownload();
   });
   document.getElementById('modalDownloadOfflineBtn').addEventListener('click', () => {
-    if (!lastResult) return;
+    if (!lastResult || hasBlockingGstinWarnings()) return;
     downloadCsv(lastResult.offlineCsv, `${currentFilenameBase()}_offline.csv`);
     persistLastInvoiceAfterDownload();
   });
@@ -1264,12 +1317,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('generateBtn').addEventListener('click', onGenerate);
   document.getElementById('downloadCombinedBtn').addEventListener('click', () => {
-    if (!lastResult) return;
+    if (!lastResult || hasBlockingGstinWarnings()) return;
     downloadCsv(lastResult.combinedCsv, `${currentFilenameBase()}.csv`);
     persistLastInvoiceAfterDownload();
   });
   document.getElementById('downloadOfflineBtn').addEventListener('click', () => {
-    if (!lastResult) return;
+    if (!lastResult || hasBlockingGstinWarnings()) return;
     downloadCsv(lastResult.offlineCsv, `${currentFilenameBase()}_offline.csv`);
     persistLastInvoiceAfterDownload();
   });
@@ -1831,7 +1884,7 @@ function onGenerate() {
   const shopifySkipped = shopifyProcessed ? shopifyProcessed.skipped.length : 0;
 
   const nonEmptyOfflineRows = offlineRows.filter(r => String(r.Date || '').trim() !== '');
-  const { orders: offlineOrders, originalRows: originalOfflineRows, skipped: offlineSkipped } =
+  const { orders: offlineOrders, originalRows: originalOfflineRows, skipped: offlineSkipped, gstinWarnings } =
     processOfflineRows(nonEmptyOfflineRows);
 
   if (shopifyOrders.length === 0 && offlineOrders.length === 0) {
@@ -1904,8 +1957,10 @@ function onGenerate() {
     firstStr, lastStr, rangeLabel, filenameBase, lastNo, counterSaved: false,
     monthlyTax, monthlySales, monthlyOrders, totalSales,
     filingStart, filingEnd,
-    onlineCount: shopifyOrders.length, offlineCount: offlineOrders.length
+    onlineCount: shopifyOrders.length, offlineCount: offlineOrders.length,
+    gstinWarnings: gstinWarnings || []
   };
+  applyGstinWarningsUI();
 
   // Show pending-download hint. The persistent counter is only advanced after
   // a real download click (see persistLastInvoiceAfterDownload).
@@ -1938,6 +1993,32 @@ function onGenerate() {
   status.textContent = 'Generated. Click "View full output" to inspect, or download directly.';
   status.className = 'status ok';
   document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hasBlockingGstinWarnings() {
+  return lastResult && (lastResult.gstinWarnings || []).length > 0;
+}
+
+function applyGstinWarningsUI() {
+  const banner = document.getElementById('gstinWarnings');
+  const warnings = (lastResult && lastResult.gstinWarnings) || [];
+  const btnIds = ['downloadCombinedBtn', 'downloadOfflineBtn', 'modalDownloadCombinedBtn', 'modalDownloadOfflineBtn'];
+  if (warnings.length === 0) {
+    if (banner) { banner.hidden = true; banner.innerHTML = ''; }
+    btnIds.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
+    return;
+  }
+  if (banner) {
+    const items = warnings.map(w =>
+      `<li>Row ${w.sheetRow} — <b>${escapeHtml(w.party)}</b> — GSTIN <code>${escapeHtml(w.gstin)}</code> — ${escapeHtml(w.reason)}</li>`
+    ).join('');
+    banner.innerHTML =
+      `<strong>⚠️ ${warnings.length} invalid GSTIN${warnings.length === 1 ? '' : 's'} — downloads disabled.</strong>` +
+      ` Fix the offline sheet and regenerate.` +
+      `<ul style="margin:8px 0 0 20px;">${items}</ul>`;
+    banner.hidden = false;
+  }
+  btnIds.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = true; });
 }
 
 function renderResultsCombinedTable() {
