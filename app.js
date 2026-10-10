@@ -2,9 +2,57 @@ const HOME_STATE = 'RJ';
 const HSN = 4909;
 const TAX_RATE = 0.18;
 
+const STATE_NAMES = {
+  AN: 'Andaman and Nicobar Islands',
+  AP: 'Andhra Pradesh',
+  AR: 'Arunachal Pradesh',
+  AS: 'Assam',
+  BR: 'Bihar',
+  CH: 'Chandigarh',
+  CT: 'Chhattisgarh',
+  CG: 'Chhattisgarh',
+  DN: 'Dadra and Nagar Haveli and Daman and Diu',
+  DD: 'Dadra and Nagar Haveli and Daman and Diu',
+  DL: 'Delhi',
+  GA: 'Goa',
+  GJ: 'Gujarat',
+  HR: 'Haryana',
+  HP: 'Himachal Pradesh',
+  JK: 'Jammu and Kashmir',
+  JH: 'Jharkhand',
+  KA: 'Karnataka',
+  KL: 'Kerala',
+  LA: 'Ladakh',
+  LD: 'Lakshadweep',
+  MP: 'Madhya Pradesh',
+  MH: 'Maharashtra',
+  MN: 'Manipur',
+  ML: 'Meghalaya',
+  MZ: 'Mizoram',
+  NL: 'Nagaland',
+  OR: 'Odisha',
+  OD: 'Odisha',
+  PY: 'Puducherry',
+  PB: 'Punjab',
+  RJ: 'Rajasthan',
+  SK: 'Sikkim',
+  TN: 'Tamil Nadu',
+  TG: 'Telangana',
+  TS: 'Telangana',
+  TR: 'Tripura',
+  UP: 'Uttar Pradesh',
+  UT: 'Uttarakhand',
+  UK: 'Uttarakhand',
+  WB: 'West Bengal'
+};
+function getStateName(code) {
+  const key = String(code || '').trim().toUpperCase();
+  return STATE_NAMES[key] || code;
+}
+
 const OFFLINE_COLUMNS = ['Date', 'Party', 'Amount', 'GST', 'Total', 'GSTIN'];
 const OUTPUT_HEADING = [
-  'Invoice Date', 'Invoice Number', 'Customer Billing Name', 'Customer Billing GSTIN',
+  'Invoice Number', 'Invoice Date', 'Customer Billing Name', 'Customer Billing GSTIN',
   'Supply State', 'HSN', 'Item Taxable Value', 'CGST', 'SGST', 'IGST', 'Total Transaction Value'
 ];
 const OFFLINE_OUTPUT_HEADING = ['Date', 'Invoice No.', 'Party', 'Amount', 'GST', 'IGST', 'Total', 'GSTIN'];
@@ -169,7 +217,7 @@ function tryBuildOnlineOrder(raw, minTotal) {
       'Invoice Number': raw.invoiceNo,
       'Customer Billing Name': raw.name,
       'Customer Billing GSTIN': '-',
-      'Supply State': raw.state,
+      'Supply State': getStateName(raw.state),
       'HSN': HSN,
       'Item Taxable Value': tax.taxable,
       'CGST': tax.cgst,
