@@ -1105,23 +1105,29 @@ function renderGrowthTile(g) {
 }
 
 function computeSyncDelta() {
-  // Returns { pendingAdds, pendingDeletes, remoteFilings } comparing local to the last remote fetch.
-  if (!remoteSnapshot) return { pendingAdds: 0, pendingDeletes: 0, remoteFilings: 0, remoteMissing: true };
-  const remoteIds = new Set((remoteSnapshot.filings || []).map(f => f.id));
-  const localIds = new Set((history.filings || []).map(f => f.id));
+  // Returns { pendingAdds, pendingDeletes, pendingModifies, modifiedIds, remoteFilings } comparing local to the last remote fetch.
+  if (!remoteSnapshot) return { pendingAdds: 0, pendingDeletes: 0, pendingModifies: 0, modifiedIds: [], remoteFilings: 0, remoteMissing: true };
+  const remoteById = new Map((remoteSnapshot.filings || []).map(f => [f.id, f]));
+  const localById = new Map((history.filings || []).map(f => [f.id, f]));
   let pendingAdds = 0;
-  for (const id of localIds) if (!remoteIds.has(id)) pendingAdds++;
+  for (const id of localById.keys()) if (!remoteById.has(id)) pendingAdds++;
   let pendingDeletes = 0;
-  for (const id of remoteIds) if (!localIds.has(id) && tombstones.has(id)) pendingDeletes++;
-  return { pendingAdds, pendingDeletes, remoteFilings: remoteIds.size, remoteMissing: false };
+  for (const id of remoteById.keys()) if (!localById.has(id) && tombstones.has(id)) pendingDeletes++;
+  const modifiedIds = [];
+  for (const [id, lf] of localById) {
+    const rf = remoteById.get(id);
+    if (!rf) continue;
+    if (JSON.stringify(lf) !== JSON.stringify(rf)) modifiedIds.push(id);
+  }
+  return { pendingAdds, pendingDeletes, pendingModifies: modifiedIds.length, modifiedIds, remoteFilings: remoteById.size, remoteMissing: false };
 }
 
 function renderSyncStatus() {
   const el = document.getElementById('historyRemoteStatus');
   if (!el) return;
   const totalLocal = (history.filings || []).length;
-  const { pendingAdds, pendingDeletes, remoteFilings, remoteMissing } = computeSyncDelta();
-  const isDirty = pendingAdds > 0 || pendingDeletes > 0;
+  const { pendingAdds, pendingDeletes, pendingModifies, remoteFilings, remoteMissing } = computeSyncDelta();
+  const isDirty = pendingAdds > 0 || pendingDeletes > 0 || pendingModifies > 0;
 
   const parts = [];
   parts.push(`Database: <code>history.json</code>`);
@@ -1134,6 +1140,7 @@ function renderSyncStatus() {
     const bits = [];
     if (pendingAdds) bits.push(`${pendingAdds} new`);
     if (pendingDeletes) bits.push(`${pendingDeletes} deleted`);
+    if (pendingModifies) bits.push(`<span style="color:#b45309;font-weight:600">${pendingModifies} MODIFIED</span>`);
     parts.push(`<span class="sync-dirty">· ${bits.join(', ')} — not yet uploaded to GitHub</span>`);
   } else if (!remoteMissing && totalLocal > 0) {
     parts.push(`<span class="sync-clean">· in sync with repo</span>`);
@@ -1425,6 +1432,20 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Repo auto-detect only works when the app is deployed to GitHub Pages.\n' +
             'On localhost, please use "Download history.json manually" instead.');
       return;
+    }
+    const delta = computeSyncDelta();
+    if (delta.pendingModifies > 0) {
+      const list = delta.modifiedIds.slice(0, 10).map(id => '  · ' + id).join('\n');
+      const extra = delta.modifiedIds.length > 10 ? `\n  … and ${delta.modifiedIds.length - 10} more` : '';
+      const msg =
+        `⚠️ ${delta.pendingModifies} existing filing(s) will be OVERWRITTEN on GitHub:\n\n${list}${extra}\n\n` +
+        `This usually happens when your browser has stale cached data. ` +
+        `Click Cancel, then "Refresh from GitHub" first unless you really intend to change historical data.\n\n` +
+        `Continue with overwrite?`;
+      if (!confirm(msg)) {
+        setSyncFeedback('err', 'Sync cancelled. Click "Refresh from GitHub" to pull the latest, then try again.');
+        return;
+      }
     }
     const content = JSON.stringify(history, null, 2) + '\n';
     const copied = await copyToClipboard(content);
