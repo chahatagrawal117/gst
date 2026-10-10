@@ -2,6 +2,36 @@
   "version": 1,
   "filings": [
     {
+      "id": "1Jul26_30Sep26_gst_sheet",
+      "period": "1Jul26 → 30Sep26 (orders: 1Jul26 – 29Sep26)",
+      "filingStart": "1Jul26",
+      "filingEnd": "30Sep26",
+      "filingStartYearMonth": "2026-07",
+      "generatedAt": "2026-10-10T06:38:30.967Z",
+      "onlineOrders": 116,
+      "offlineOrders": 14,
+      "totalInvoices": 130,
+      "invoiceRangeStart": 757,
+      "invoiceRangeEnd": 886,
+      "totalTax": 39185.5,
+      "monthlyTax": {
+        "2026-07": 12196.51,
+        "2026-08": 13506.39,
+        "2026-09": 13482.6
+      },
+      "totalSales": 256883,
+      "monthlySales": {
+        "2026-07": 79955,
+        "2026-08": 88542,
+        "2026-09": 88386
+      },
+      "monthlyOrders": {
+        "2026-07": 49,
+        "2026-08": 45,
+        "2026-09": 36
+      }
+    },
+    {
       "id": "1Apr26_30Jun26_gst_sheet",
       "period": "1Apr26 \u2192 30Jun26",
       "filingStart": "1Apr26",
