@@ -1,4 +1,5 @@
 const HOME_STATE = 'RJ';
+const HOME_STATE_GSTIN_PREFIX = '08';
 const HSN = 4909;
 const TAX_RATE = 0.18;
 
@@ -286,7 +287,6 @@ function processOfflineRows(rows) {
 
     tempNo++;
     const parsed = parseOfflineDate(dateStr);
-    const tax = computeTax(total, 'OTHER');
 
     const gstinRaw = String(row['GSTIN'] || '').trim();
     const check = validateGSTIN(gstinRaw);
@@ -298,6 +298,10 @@ function processOfflineRows(rows) {
         reason: check.reason
       });
     }
+    const gstinPrefix = (check.valid && !check.empty) ? gstinRaw.substring(0, 2) : '';
+    const stateForTax = gstinPrefix === HOME_STATE_GSTIN_PREFIX ? HOME_STATE : 'OTHER';
+    const supplyStateName = gstinPrefix && GSTIN_STATE_PREFIX[gstinPrefix] ? GSTIN_STATE_PREFIX[gstinPrefix] : '-';
+    const tax = computeTax(total, stateForTax);
 
     orders.push({
       _source: 'offline',
@@ -307,8 +311,8 @@ function processOfflineRows(rows) {
       'Invoice Date': formatDate(parsed),
       'Invoice Number': `OFF-${tempNo}`,
       'Customer Billing Name': String(row['Party'] || '').trim(),
-      'Customer Billing GSTIN': String(row['GSTIN'] || '').trim(),
-      'Supply State': '-',
+      'Customer Billing GSTIN': gstinRaw,
+      'Supply State': supplyStateName,
       'HSN': HSN,
       'Item Taxable Value': tax.taxable,
       'CGST': tax.cgst,
