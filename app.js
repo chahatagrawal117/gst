@@ -705,6 +705,8 @@ function currentFilingSummary() {
     generatedAt: new Date().toISOString(),
     onlineOrders: lastResult.onlineCount,
     offlineOrders: lastResult.offlineCount,
+    onlineOrdersSkipped: lastResult.onlineSkipped || 0,
+    offlineOrdersSkipped: lastResult.offlineSkipped || 0,
     totalInvoices: lastResult.combined.length,
     invoiceRangeStart: lastResult.startingInvoiceNo,
     invoiceRangeEnd: lastResult.lastNo,
@@ -1179,11 +1181,14 @@ function renderHistoryCard() {
   const totalTax = filings.reduce((s, f) => round2(s + (f.totalTax || 0)), 0);
   const totalSales = filings.reduce((s, f) => round2(s + (f.totalSales || 0)), 0);
   const totalInvoices = filings.reduce((s, f) => s + (f.totalInvoices || 0), 0);
+  const totalSkipped = filings.reduce((s, f) => s + (f.onlineOrdersSkipped || 0) + (f.offlineOrdersSkipped || 0), 0);
+  const totalReceived = totalInvoices + totalSkipped;
 
   totals.hidden = false;
   totals.innerHTML = `
     <div><span class="label">Filings recorded</span><span class="value">${filings.length}</span></div>
-    <div><span class="label">Total orders</span><span class="value">${totalInvoices.toLocaleString('en-IN')}</span></div>
+    <div><span class="label">Total orders filed</span><span class="value">${totalInvoices.toLocaleString('en-IN')}${totalSkipped ? ` <small>(+${totalSkipped} skipped &lt; ₹10)</small>` : ''}</span></div>
+    <div><span class="label">Total orders received</span><span class="value">${totalReceived.toLocaleString('en-IN')}</span></div>
     <div class="tile-highlight"><span class="label">Total sales</span><span class="value">${inr(totalSales)}</span></div>
     <div><span class="label">Total tax filed</span><span class="value">${inr(totalTax)}</span></div>
   `;
@@ -1983,6 +1988,7 @@ function onGenerate() {
     monthlyTax, monthlySales, monthlyOrders, totalSales,
     filingStart, filingEnd,
     onlineCount: shopifyOrders.length, offlineCount: offlineOrders.length,
+    onlineSkipped: shopifySkipped, offlineSkipped: offlineSkipped,
     gstinWarnings: gstinWarnings || []
   };
   applyGstinWarningsUI();
